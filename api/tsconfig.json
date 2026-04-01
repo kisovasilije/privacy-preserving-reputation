@@ -9,7 +9,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node"]
     // File Layout
 
     // Environment Settings
@@ -42,5 +42,5 @@
     // "noUncheckedSideEffectImports": true,
     // "moduleDetection": "force",
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*"]
 }
