@@ -1,0 +1,79 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  username String @unique
+  password String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rounds          Round[]
+  ratingsRated    Rating[]    @relation("RatingsRated")
+  ratingsReceived Rating[]    @relation("RatingsReceived")
+  aggregates      Aggregate[]
+
+  @@map("users")
+}
+
+model Round {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  opensAt     DateTime
+  closesAt    DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author     User        @relation(fields: [authorId], references: [id])
+  authorId   Int
+  aggregates Aggregate[]
+  ratings    Rating[]
+
+  @@map("rounds")
+}
+
+model Rating {
+  id      Int     @id @default(autoincrement())
+  value   Int
+  comment String?
+
+  round    Round @relation(fields: [roundId], references: [id])
+  roundId  Int
+  rater    User  @relation("RatingsRated", fields: [raterId], references: [id])
+  raterId  Int
+  target   User  @relation("RatingsReceived", fields: [targetId], references: [id])
+  targetId Int
+
+  @@unique([roundId, raterId, targetId])
+  @@map("ratings")
+}
+
+model Aggregate {
+  id      Int   @id @default(autoincrement())
+  count   Int   @default(0)
+  sum     Int   @default(0)
+  average Float @default(0)
+
+  round    Round @relation(fields: [roundId], references: [id])
+  roundId  Int
+  target   User  @relation(fields: [targetId], references: [id])
+  targetId Int
+
+  @@unique([roundId, targetId])
+  @@map("aggregates")
+}
