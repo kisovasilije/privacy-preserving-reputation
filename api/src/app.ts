@@ -1,14 +1,10 @@
-import { createServer } from 'node:http';
+import 'dotenv/config';
+import { buildApp } from './bootstrap';
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 8080;
 
-const server = createServer((req, res) => {
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(
-    JSON.stringify({
-      data: 'Hello World!',
-    }),
-  );
+const app = buildApp();
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
-
-server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
