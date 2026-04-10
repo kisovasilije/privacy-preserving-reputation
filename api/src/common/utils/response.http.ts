@@ -11,3 +11,7 @@ export const created = <T>(res: Response, data?: T) => {
 export const badRequest = (res: Response, message: string) => {
   return res.status(400).json({ message });
 };
+
+export const unauthorized = (res: Response, message: string) => {
+  return res.status(401).json({ message });
+};

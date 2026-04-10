@@ -1,5 +1,6 @@
+import { JwtUser } from '../../common/models/jwt-user.model';
 import { result, Result } from '../../common/result';
-import { authHelpers } from './auth.helpers';
+import { authHelpers } from '../../common/utils/jwt.helper';
 import { authRepository } from './auth.repository';
 import { AuthenticationRequest, RegistrationRequest } from './auth.schemas';
 import bcrypt from 'bcryptjs';
@@ -26,5 +27,14 @@ export const authService = {
 
     const user = await authRepository.register({ email, username, password: passwordHash });
     return result.success({ username: user.username, email: user.email });
+  },
+
+  refresh: async (username: string, email: string): Promise<Result> => {
+    const exists = await authRepository.existsByUsername(username);
+    if (!exists) {
+      return result.failure('User not found');
+    }
+
+    return result.success({ accessToken: authHelpers.signAccessToken({ username, email }) });
   },
 };

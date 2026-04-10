@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { withBody } from '../../common/validator';
+import { withBody } from '../../common/utils/validator';
 import { authenticationSchema, registrationSchema } from './auth.schemas';
 import { authController } from './auth.controller';
+import { isAuthenticated } from '../../common/middlewares/auth.middleware';
 
 export const authRouter = Router();
 
@@ -9,6 +10,6 @@ authRouter.post('/authenticate', withBody(authenticationSchema, authController.a
 
 authRouter.post('/register', withBody(registrationSchema, authController.register));
 
-authRouter.post('/refresh', async (req, res) => {});
+authRouter.get('/refresh', isAuthenticated, authController.refresh);
 
-authRouter.post('/logout', async (req, res) => {});
+// authRouter.post('/logout', async (req, res) => {});
