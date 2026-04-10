@@ -6,4 +6,8 @@ export const authRepository = {
   register: async (user: UserCreation): Promise<User> => {
     return prisma.user.create({ data: user });
   },
+
+  getByUsername: async (username: string): Promise<User | null> => {
+    return prisma.user.findUnique({ where: { username } });
+  },
 };

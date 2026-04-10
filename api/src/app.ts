@@ -1,7 +1,7 @@
-import 'dotenv/config';
 import { buildApp } from './bootstrap';
+import { environment } from './config/env';
 
-const PORT = Number(process.env.PORT) || 8080;
+const PORT = environment.PORT;
 
 const app = buildApp();
 

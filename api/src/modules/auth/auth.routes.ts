@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { withBody } from '../../common/validator';
-import { registrationSchema } from './auth.schemas';
+import { authenticationSchema, registrationSchema } from './auth.schemas';
 import { authController } from './auth.controller';
 
 export const authRouter = Router();
 
-// authRouter.post('/authenticate', withBody(registrationSchema, authController.authenticate));
+authRouter.post('/authenticate', withBody(authenticationSchema, authController.authenticate));
 
 authRouter.post('/register', withBody(registrationSchema, authController.register));
 

@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 export function withBody<TSchema extends z.ZodTypeAny>(
   schema: TSchema,
-  handler: (req: Request, res: Response, body: z.infer<TSchema>) => Promise<void> | void,
+  handler: (req: Request, res: Response, body: z.infer<TSchema>) => Promise<Response | void> | void,
 ): RequestHandler {
   return async (req, res) => {
     const parseResult = schema.safeParse(req.body);
