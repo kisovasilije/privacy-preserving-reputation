@@ -1,0 +1,86 @@
+<section class="auth-layout">
+  <div class="auth-copy">
+    <span class="eyebrow">Private Community Ratings</span>
+    <h1>Share trust carefully, keep identities protected.</h1>
+    <p>
+      Sign in to continue rating other users in a privacy-preserving space, or create an account to
+      join and start contributing fair, real-world feedback.
+    </p>
+  </div>
+
+  <mat-card class="page-card auth-card" appearance="outlined">
+    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)">
+      <mat-tab label="Sign in">
+        <form class="auth-form" [formGroup]="loginForm" (ngSubmit)="submitLogin()">
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="username" autocomplete="username" />
+            <mat-error>Username must be between 3 and 32 characters.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password" autocomplete="current-password" />
+            <mat-error>Password must be between 3 and 128 characters.</mat-error>
+          </mat-form-field>
+
+          <button mat-flat-button type="submit" [disabled]="loginPending()">
+            @if (loginPending()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <span>Sign in</span>
+            }
+          </button>
+        </form>
+      </mat-tab>
+
+      <mat-tab label="Create account">
+        <form class="auth-form" [formGroup]="registerForm" (ngSubmit)="submitRegister()">
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" autocomplete="email" />
+            <mat-error>Enter a valid email address.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="username" autocomplete="username" />
+            <mat-error>Username must be between 3 and 32 characters.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" formControlName="password" autocomplete="new-password" />
+            <mat-error>Password must be between 3 and 128 characters.</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Confirm password</mat-label>
+            <input matInput type="password" formControlName="confirmPassword" autocomplete="new-password" />
+            @if (hasRegisterMismatch()) {
+              <mat-error>Passwords must match.</mat-error>
+            } @else {
+              <mat-error>Confirm password is required.</mat-error>
+            }
+          </mat-form-field>
+
+          <button mat-flat-button type="submit" [disabled]="registerPending()">
+            @if (registerPending()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <span>Create account</span>
+            }
+          </button>
+        </form>
+      </mat-tab>
+    </mat-tab-group>
+
+    @if (errorMessage(); as message) {
+      <div class="status-banner status-banner--error">{{ message }}</div>
+    }
+
+    @if (successMessage(); as message) {
+      <div class="status-banner status-banner--success">{{ message }}</div>
+    }
+  </mat-card>
+</section>

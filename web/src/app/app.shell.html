@@ -1,0 +1,20 @@
+<mat-toolbar class="app-toolbar">
+  <a class="brand" routerLink="/">Privacy Preserving Reputation</a>
+
+  <span class="spacer"></span>
+
+  <div class="toolbar-actions">
+    @if (authStore.isAuthenticated()) {
+      <span class="welcome">Signed in as {{ authStore.username() ?? 'user' }}</span>
+      <button mat-button routerLink="/">Home</button>
+      <button mat-flat-button type="button" (click)="logout()">Logout</button>
+    } @else {
+      <button mat-button routerLink="/auth" [queryParams]="{ mode: 'login' }">Login</button>
+      <button mat-flat-button routerLink="/auth" [queryParams]="{ mode: 'register' }">Register</button>
+    }
+  </div>
+</mat-toolbar>
+
+<main class="app-content">
+  <router-outlet />
+</main>

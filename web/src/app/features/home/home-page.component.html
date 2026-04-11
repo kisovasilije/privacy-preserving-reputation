@@ -1,0 +1,34 @@
+<section class="home-layout">
+  <mat-card class="page-card hero-card" appearance="outlined">
+    <span class="eyebrow">Private Reputation</span>
+    <h1>Your trusted circle starts here.</h1>
+    <p>
+      Use this space to review people you know, share honest feedback, and help build a reputation
+      picture that respects personal privacy.
+    </p>
+
+    <div class="hero-actions">
+      <button mat-flat-button type="button" (click)="renewAccessToken()" [disabled]="refreshing()">
+        {{ refreshing() ? 'Checking access...' : 'Confirm access' }}
+      </button>
+    </div>
+
+    @if (statusMessage(); as message) {
+      <div class="status-banner" [class.status-banner--success]="statusTone() === 'success'" [class.status-banner--error]="statusTone() === 'error'">
+        {{ message }}
+      </div>
+    }
+  </mat-card>
+
+  <mat-card class="page-card info-card" appearance="outlined">
+    <h2>Your profile</h2>
+    <div class="session-row">
+      <span>Member</span>
+      <strong>{{ authStore.username() ?? 'Unknown' }}</strong>
+    </div>
+    <div class="session-row">
+      <span>Access</span>
+      <strong>{{ authStore.isAuthenticated() ? 'Private area open' : 'Guest view' }}</strong>
+    </div>
+  </mat-card>
+</section>
