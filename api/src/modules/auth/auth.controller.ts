@@ -23,8 +23,8 @@ export const authController = {
   },
 
   refresh: async (req: Request, res: Response): Promise<Response | void> => {
-    const { sub, email } = req.user!;
-    const result = await authService.refresh(sub, email);
+    const { id, username, email } = req.user!;
+    const result = await authService.refresh(id, username, email);
     if (!result.success) {
       return badRequest(res, 'Token refresh failed');
     }

@@ -9,7 +9,7 @@ export const authHelpers = {
     return bcrypt.compare(password, passwordHash);
   },
 
-  signAccessToken: (user: { username: string; email: string }): string => {
+  signAccessToken: (user: { id: number; username: string; email: string }): string => {
     const options: SignOptions = {
       algorithm: 'HS256',
       expiresIn: environment.JWT_EXPIRATION,
@@ -18,7 +18,7 @@ export const authHelpers = {
       subject: user.username,
     };
 
-    return sign({ email: user.email }, environment.JWT_SECRET, options);
+    return sign({ id: user.id, email: user.email }, environment.JWT_SECRET, options);
   },
 
   verifyAccessToken: (token: string): JwtUser => {
@@ -29,14 +29,15 @@ export const authHelpers = {
     });
 
     if (
+      decoded == null ||
       typeof decoded !== 'object' ||
-      decoded === null ||
+      typeof decoded.id !== 'number' ||
       typeof decoded.sub !== 'string' ||
       typeof decoded.email !== 'string'
     ) {
       throw new JsonWebTokenError('Invalid token payload');
     }
 
-    return { username: decoded.sub, email: decoded.email };
+    return { id: decoded.id, username: decoded.sub, email: decoded.email };
   },
 };

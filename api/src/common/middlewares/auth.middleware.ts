@@ -20,7 +20,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 
   try {
     const decoded = authHelpers.verifyAccessToken(token);
-    req.user = { sub: decoded.username, email: decoded.email };
+    req.user = { id: decoded.id, username: decoded.username, email: decoded.email };
     return next();
   } catch (error) {
     if (error instanceof TokenExpiredError) {

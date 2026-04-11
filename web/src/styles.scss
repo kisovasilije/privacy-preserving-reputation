@@ -1,5 +1,12 @@
 @use '@angular/material' as mat;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Inter+Tight:wght@600;700;800&display=swap');
+
+:root {
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter Tight", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
 html {
   @include mat.theme((
     color: (
@@ -7,7 +14,7 @@ html {
       primary: mat.$azure-palette,
       tertiary: mat.$blue-palette,
     ),
-    typography: Roboto,
+    typography: Inter,
     density: 0,
   ));
 }
@@ -24,10 +31,20 @@ body {
 body {
   margin: 0;
   color: var(--mat-sys-on-surface);
-  font-family: Roboto, "Helvetica Neue", sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background:
     radial-gradient(circle at top, rgba(24, 118, 210, 0.16), transparent 38%),
     linear-gradient(180deg, #f5f8fc 0%, #edf2f7 100%);
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand {
+  font-family: var(--font-display);
 }
 
 button,

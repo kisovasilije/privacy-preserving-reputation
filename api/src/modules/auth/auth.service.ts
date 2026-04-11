@@ -29,12 +29,12 @@ export const authService = {
     return result.success({ username: user.username, email: user.email });
   },
 
-  refresh: async (username: string, email: string): Promise<Result> => {
+  refresh: async (id: number, username: string, email: string): Promise<Result> => {
     const exists = await authRepository.existsByUsername(username);
     if (!exists) {
       return result.failure('User not found');
     }
 
-    return result.success({ accessToken: authHelpers.signAccessToken({ username, email }) });
+    return result.success({ accessToken: authHelpers.signAccessToken({ id, username, email }) });
   },
 };
