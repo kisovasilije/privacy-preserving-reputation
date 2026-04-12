@@ -1,5 +1,6 @@
 import { result, Result } from '../../common/result';
 import { Round } from '../../generated/prisma/client';
+import { RoundsError, RoundsErrorCode } from './errors/rounds.error';
 import { OpenedRounds } from './models/opened-rounds.model';
 import { roundsRepository } from './rounds.repository';
 import { CreateRoundRequest } from './rounds.schemas';
@@ -26,27 +27,18 @@ export const roundsService = {
     return result.success(rounds);
   },
 
-  close: async (roundId: number, userId: number): Promise<Result<Round>> => {
+  close: async (roundId: number, userId: number): Promise<Result<Round | null>> => {
     const round = await roundsRepository.getById(roundId);
     if (!round) {
-      return result.failure({
-        message: 'Round not found',
-        errorCode: 'ROUND_NOT_FOUND',
-      });
+      return result.failure(new RoundsError('Round not found', RoundsErrorCode.RoundNotFound));
     }
 
     if (round.authorId !== userId) {
-      return result.failure({
-        message: 'You are not the owner of this round',
-        errorCode: 'FORBIDDEN',
-      });
+      return result.failure(new RoundsError('You are not the owner of this round', RoundsErrorCode.ForbiddenRound));
     }
 
     if (new Date() >= round.closesAt) {
-      return result.failure({
-        message: 'Round is already closed',
-        errorCode: 'ROUND_ALREADY_CLOSED',
-      });
+      return result.failure(new RoundsError('Round is already closed', RoundsErrorCode.RoundAlreadyClosed));
     }
 
     round.closesAt = new Date();

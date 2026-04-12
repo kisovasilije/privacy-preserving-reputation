@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
 import { CreateRoundRequest } from './rounds.schemas';
 import { roundsService } from './rounds.service';
-import { badRequest, conflict, created, forbidden, notFound, ok } from '../../common/utils/response.http';
+import { badRequest, created, ok } from '../../common/utils/response.http';
 import { OpenedRounds } from './models/opened-rounds.model';
-import { Round } from '../../generated/prisma/client';
 
 export const roundsController = {
   create: async (req: Request<{}, {}, CreateRoundRequest>, res: Response) => {
@@ -24,7 +23,7 @@ export const roundsController = {
     return res.status(200).json(result.value ?? []);
   },
 
-  close: async (req: Request<{ roundId: string }>, res: Response<Round>) => {
+  close: async (req: Request<{ roundId: string }>, res: Response) => {
     const roundId = Number(req.params.roundId);
     const userId = req.user!.id;
 
@@ -33,21 +32,7 @@ export const roundsController = {
       return ok(res, result.value!);
     }
 
-    if (!isErrorWithCode(result.error)) {
-      return badRequest(res, 'Failed to close round');
-    }
-
-    switch (result.error.errorCode) {
-      case 'ROUND_NOT_FOUND':
-        return notFound(res, result.error.message);
-      case 'FORBIDDEN':
-        return forbidden(res, result.error.message);
-      case 'ROUND_ALREADY_CLOSED':
-        return conflict(res, result.error.message);
-    }
+    const { httpStatusCode, error } = result.error!.errorResponseDetails;
+    return res.status(httpStatusCode).json(error);
   },
 };
-
-function isErrorWithCode(error: unknown): error is { message: string; errorCode: string } {
-  return error != null && typeof error === 'object' && 'errorCode' in error && 'message' in error;
-}

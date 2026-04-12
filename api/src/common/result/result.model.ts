@@ -1,5 +1,7 @@
-export interface Result<TValue = unknown, TError = unknown> {
+import { ResultError } from './result-error.model';
+
+export interface Result<TValue = unknown> {
   success: boolean;
   value: TValue | null;
-  error?: TError;
+  error?: ResultError;
 }
