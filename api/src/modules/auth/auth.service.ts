@@ -1,5 +1,5 @@
-import { JwtUser } from '../../common/models/jwt-user.model';
 import { result, Result } from '../../common/result';
+import { Error } from '../../common/result/result-error.model';
 import { authHelpers } from '../../common/utils/jwt.helper';
 import { authRepository } from './auth.repository';
 import { AuthenticationRequest, RegistrationRequest } from './auth.schemas';
@@ -9,12 +9,12 @@ export const authService = {
   authenticate: async (authenticationRequest: AuthenticationRequest): Promise<Result> => {
     const user = await authRepository.getByUsername(authenticationRequest.username);
     if (!user) {
-      return result.failure('User not found');
+      return result.failure(new Error('User not found'));
     }
 
     const match = await authHelpers.comparePasswords(authenticationRequest.password, user.password);
     if (!match) {
-      return result.failure('Invalid username or password');
+      return result.failure(new Error('Invalid username or password'));
     }
 
     return result.success({ username: user.username, accessToken: authHelpers.signAccessToken(user) });
@@ -32,7 +32,7 @@ export const authService = {
   refresh: async (id: number, username: string, email: string): Promise<Result> => {
     const exists = await authRepository.existsByUsername(username);
     if (!exists) {
-      return result.failure('User not found');
+      return result.failure(new Error('User not found'));
     }
 
     return result.success({ accessToken: authHelpers.signAccessToken({ id, username, email }) });
