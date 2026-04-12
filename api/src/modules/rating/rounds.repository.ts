@@ -8,4 +8,26 @@ export const roundsRepository = {
       data: { ...round },
     });
   },
+
+  getOpened: (): Promise<Round[]> => {
+    const now = new Date();
+
+    return prisma.round.findMany({
+      where: {
+        opensAt: { lte: now },
+        closesAt: { gte: now },
+      },
+    });
+  },
+
+  getById: (id: number): Promise<Round | null> => {
+    return prisma.round.findUnique({ where: { id } });
+  },
+
+  close: (round: Round): Promise<Round> => {
+    return prisma.round.update({
+      where: { id: round.id },
+      data: { closesAt: round.closesAt },
+    });
+  },
 };

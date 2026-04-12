@@ -12,12 +12,6 @@
         {{ refreshing() ? 'Checking access...' : 'Confirm access' }}
       </button>
     </div>
-
-    @if (statusMessage(); as message) {
-      <div class="status-banner" [class.status-banner--success]="statusTone() === 'success'" [class.status-banner--error]="statusTone() === 'error'">
-        {{ message }}
-      </div>
-    }
   </mat-card>
 
   <mat-card class="page-card info-card" appearance="outlined">
@@ -30,5 +24,165 @@
       <span>Access</span>
       <strong>{{ authStore.isAuthenticated() ? 'Private area open' : 'Guest view' }}</strong>
     </div>
+  </mat-card>
+</section>
+
+@if (statusMessage(); as message) {
+  <div class="status-banner home-status" [class.status-banner--success]="statusTone() === 'success'" [class.status-banner--error]="statusTone() === 'error'">
+    {{ message }}
+  </div>
+}
+
+<section class="rounds-layout">
+  <mat-card class="page-card create-card" appearance="outlined">
+    <span class="eyebrow eyebrow--muted">Create Round</span>
+    <h2>Open a new rating round</h2>
+    <p class="section-copy">
+      Start a new round for private feedback. Set when it begins and when it closes.
+    </p>
+
+    <form class="round-form" [formGroup]="createRoundForm" (ngSubmit)="submitCreateRound()">
+      <mat-form-field appearance="outline">
+        <mat-label>Title</mat-label>
+        <input matInput formControlName="title" />
+        @if (createRoundForm.controls.title.touched && getTitleErrorMessage()) {
+          <mat-error>{{ getTitleErrorMessage() }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" rows="4"></textarea>
+        @if (createRoundForm.controls.description.touched && getDescriptionErrorMessage()) {
+          <mat-error>{{ getDescriptionErrorMessage() }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="date-time-group">
+        <div class="date-time-group__header">Opens at</div>
+        <div class="date-time-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Date</mat-label>
+            <input matInput [matDatepicker]="opensAtPicker" formControlName="opensAtDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="opensAtPicker"></mat-datepicker-toggle>
+            <mat-datepicker #opensAtPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Time</mat-label>
+            <mat-select formControlName="opensAtTime">
+              @for (hour of hourOptions; track hour) {
+                @for (minute of minuteOptions; track minute) {
+                  <mat-option [value]="hour + ':' + minute">{{ hour }}:{{ minute }}</mat-option>
+                }
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <div class="date-time-group">
+        <div class="date-time-group__header">Closes at</div>
+        <div class="date-time-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Date</mat-label>
+            <input matInput [matDatepicker]="closesAtPicker" formControlName="closesAtDate" />
+            <mat-datepicker-toggle matIconSuffix [for]="closesAtPicker"></mat-datepicker-toggle>
+            <mat-datepicker #closesAtPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Time</mat-label>
+            <mat-select formControlName="closesAtTime">
+              @for (hour of hourOptions; track hour) {
+                @for (minute of minuteOptions; track minute) {
+                  <mat-option [value]="hour + ':' + minute">{{ hour }}:{{ minute }}</mat-option>
+                }
+              }
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+
+      @if (getScheduleErrorMessage(); as message) {
+        <div class="form-hint form-hint--error">{{ message }}</div>
+      }
+
+      <div class="form-actions">
+        <button mat-flat-button type="submit" [disabled]="createPending()">
+          {{ createPending() ? 'Creating round...' : 'Create round' }}
+        </button>
+      </div>
+    </form>
+  </mat-card>
+
+  <mat-card class="page-card opened-rounds-card" appearance="outlined">
+    <div class="rounds-header">
+      <div>
+        <span class="eyebrow eyebrow--muted">Opened Rounds</span>
+        <h2>Rounds happening now</h2>
+        <p class="section-copy">
+          Review active rounds and close your own early when you need to stop collecting ratings.
+        </p>
+      </div>
+
+      <button mat-button type="button" (click)="loadOpenedRounds()" [disabled]="roundsLoading()">
+        Refresh
+      </button>
+    </div>
+
+    @if (roundsLoading()) {
+      <div class="rounds-state">
+        <mat-spinner diameter="28"></mat-spinner>
+        <span>Loading opened rounds...</span>
+      </div>
+    } @else if (roundsFetchError()) {
+      <div class="rounds-state rounds-state--error">
+        <p>{{ roundsFetchError() }}</p>
+        <button mat-button type="button" (click)="loadOpenedRounds()">Try again</button>
+      </div>
+    } @else if (!openedRounds().length) {
+      <div class="rounds-state">
+        <p>No rounds are open right now.</p>
+      </div>
+    } @else {
+      <div class="rounds-grid">
+        @for (round of openedRounds(); track round.id) {
+          <article class="round-card">
+            <div class="round-card__header">
+              <div>
+                <h3>{{ round.title }}</h3>
+                @if (isOwner(round)) {
+                  <span class="owner-badge">Your round</span>
+                }
+              </div>
+            </div>
+
+            @if (round.description) {
+              <p class="round-description">{{ round.description }}</p>
+            }
+
+            <div class="round-meta">
+              <div class="round-meta__row">
+                <span>Opens</span>
+                <strong>{{ formatDateTime(round.opensAt) }}</strong>
+              </div>
+              <div class="round-meta__row">
+                <span>Closes</span>
+                <strong>{{ formatDateTime(round.closesAt) }}</strong>
+              </div>
+            </div>
+
+            @if (isOwner(round)) {
+              <div class="round-card__actions">
+                <button mat-button type="button" (click)="closeRound(round.id)" [disabled]="isClosePending(round.id)">
+                  {{ isClosePending(round.id) ? 'Closing...' : 'Close early' }}
+                </button>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
   </mat-card>
 </section>

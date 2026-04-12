@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 
 interface AuthSession {
   accessToken: string;
+  userId: number | null;
   username: string | null;
 }
 
@@ -11,12 +12,17 @@ export class AuthStore {
   private readonly sessionState = signal<AuthSession | null>(this.readInitialSession());
 
   readonly accessToken = computed(() => this.sessionState()?.accessToken ?? null);
+  readonly userId = computed(() => this.sessionState()?.userId ?? null);
   readonly username = computed(() => this.sessionState()?.username ?? null);
   readonly isAuthenticated = computed(() => this.accessToken() !== null);
 
   setSession(accessToken: string, username?: string | null): void {
-    const resolvedUsername = username ?? this.decodeUsername(accessToken);
-    this.sessionState.set({ accessToken, username: resolvedUsername });
+    const claims = this.decodeSessionClaims(accessToken);
+    this.sessionState.set({
+      accessToken,
+      userId: claims.userId,
+      username: username ?? claims.username,
+    });
     localStorage.setItem(this.storageKey, accessToken);
   }
 
@@ -31,25 +37,31 @@ export class AuthStore {
       return null;
     }
 
+    const claims = this.decodeSessionClaims(accessToken);
+
     return {
       accessToken,
-      username: this.decodeUsername(accessToken),
+      userId: claims.userId,
+      username: claims.username,
     };
   }
 
-  private decodeUsername(token: string): string | null {
+  private decodeSessionClaims(token: string): { userId: number | null; username: string | null } {
     try {
       const [, payloadSegment] = token.split('.');
       if (!payloadSegment) {
-        return null;
+        return { userId: null, username: null };
       }
 
       const normalized = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
       const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-      const payload = JSON.parse(atob(padded)) as { sub?: string };
-      return typeof payload.sub === 'string' ? payload.sub : null;
+      const payload = JSON.parse(atob(padded)) as { id?: number; sub?: string };
+      return {
+        userId: typeof payload.id === 'number' ? payload.id : null,
+        username: typeof payload.sub === 'string' ? payload.sub : null,
+      };
     } catch {
-      return null;
+      return { userId: null, username: null };
     }
   }
 }

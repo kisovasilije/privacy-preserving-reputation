@@ -48,3 +48,13 @@ export const createRoundSchema = z
   });
 
 export type CreateRoundRequest = z.infer<typeof createRoundSchema> & { authorId: number };
+
+export const closeRoundParamsSchema = z.object({
+  roundId: z.string().refine(
+    id => {
+      const num = Number(id);
+      return !Number.isNaN(num) && num > 0;
+    },
+    { error: 'Must be a positive integer' },
+  ),
+});
