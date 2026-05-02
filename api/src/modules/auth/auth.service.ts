@@ -1,5 +1,6 @@
 import { result, Result } from '../../common/result';
 import { authHelpers } from '../../common/utils/jwt.helper';
+import { User } from '../../generated/prisma/client';
 import { authRepository } from './auth.repository';
 import { AuthenticationRequest, RegistrationRequest } from './auth.schemas';
 import bcrypt from 'bcryptjs';
@@ -38,5 +39,9 @@ export const authService = {
     }
 
     return result.success({ accessToken: authHelpers.signAccessToken({ id, username, email }) });
+  },
+
+  getById: async (id: number): Promise<User | null> => {
+    return await authRepository.getById(id);
   },
 };

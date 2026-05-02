@@ -1,8 +1,8 @@
-import { result, Result } from '../../common/result';
-import { Round } from '../../generated/prisma/client';
-import { OpenedRounds } from './models/opened-rounds.model';
-import { roundsRepository } from './rounds.repository';
-import { CreateRoundRequest } from './rounds.schemas';
+import { result, Result } from '../../../common/result';
+import { Round } from '../../../generated/prisma/client';
+import { OpenedRounds } from '../models/opened-rounds.model';
+import { roundsRepository } from '../repositories/rounds.repository';
+import { CreateRoundRequest } from '../schemas/rounds.schemas';
 
 export const roundsService = {
   create: async (request: CreateRoundRequest): Promise<Result> => {
@@ -52,5 +52,18 @@ export const roundsService = {
     round.closesAt = new Date();
     const updatedRound = await roundsRepository.close(round);
     return result.success(updatedRound);
+  },
+
+  getOpenedById: async (roundId: number): Promise<Round | null> => {
+    const round = await roundsRepository.getById(roundId);
+    if (!round) {
+      return null;
+    }
+
+    if (new Date() < round.opensAt || new Date() > round.closesAt) {
+      return null;
+    }
+
+    return round;
   },
 };

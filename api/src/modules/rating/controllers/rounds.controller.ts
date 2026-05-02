@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { CreateRoundRequest } from './rounds.schemas';
-import { roundsService } from './rounds.service';
-import { badRequest, created, ok } from '../../common/utils/response.http';
-import { OpenedRounds } from './models/opened-rounds.model';
+import { CreateRoundRequest } from '../schemas/rounds.schemas';
+import { roundsService } from '../services/rounds.service';
+import { badRequest, created, ok } from '../../../common/utils/response.http';
+import { OpenedRounds } from '../models/opened-rounds.model';
 
 export const roundsController = {
   create: async (req: Request<{}, {}, CreateRoundRequest>, res: Response) => {

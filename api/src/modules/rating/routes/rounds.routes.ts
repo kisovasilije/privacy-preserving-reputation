@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { validate, withBody } from '../../../common/utils/validator';
-import { closeRoundParamsSchema, createRoundSchema } from '../rounds.schemas';
-import { roundsController } from '../rounds.controller';
+import { closeRoundParamsSchema, createRoundSchema } from '../schemas/rounds.schemas';
+import { roundsController } from '../controllers/rounds.controller';
 import { isAuthenticated } from '../../../common/middlewares/auth.middleware';
 
 export const roundsRouter = Router();

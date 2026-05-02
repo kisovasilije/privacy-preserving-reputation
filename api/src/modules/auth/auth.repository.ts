@@ -14,4 +14,8 @@ export const authRepository = {
   existsByUsername: async (username: string): Promise<boolean> => {
     return (await prisma.user.count({ where: { username } })) > 0;
   },
+
+  getById: async (id: number): Promise<User | null> => {
+    return prisma.user.findUnique({ where: { id } });
+  },
 };
