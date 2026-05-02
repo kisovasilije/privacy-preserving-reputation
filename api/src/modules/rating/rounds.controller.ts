@@ -32,7 +32,7 @@ export const roundsController = {
       return ok(res, result.value!);
     }
 
-    const { httpStatusCode, error } = result.error!.errorResponseDetails;
-    return res.status(httpStatusCode).json(error);
+    const { message, httpStatusCode } = result.error!;
+    return res.status(httpStatusCode ? httpStatusCode : 500).json(message);
   },
 };

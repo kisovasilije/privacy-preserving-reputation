@@ -1,5 +1,4 @@
 import { result, Result } from '../../common/result';
-import { Error } from '../../common/result/result-error.model';
 import { authHelpers } from '../../common/utils/jwt.helper';
 import { authRepository } from './auth.repository';
 import { AuthenticationRequest, RegistrationRequest } from './auth.schemas';
@@ -9,12 +8,15 @@ export const authService = {
   authenticate: async (authenticationRequest: AuthenticationRequest): Promise<Result> => {
     const user = await authRepository.getByUsername(authenticationRequest.username);
     if (!user) {
-      return result.failure(new Error('User not found'));
+      return result.failure({ message: 'User not found', httpStatusCode: 404 });
     }
 
     const match = await authHelpers.comparePasswords(authenticationRequest.password, user.password);
     if (!match) {
-      return result.failure(new Error('Invalid username or password'));
+      return result.failure({
+        message: 'Invalid username or password',
+        httpStatusCode: 400,
+      });
     }
 
     return result.success({ username: user.username, accessToken: authHelpers.signAccessToken(user) });
@@ -32,7 +34,7 @@ export const authService = {
   refresh: async (id: number, username: string, email: string): Promise<Result> => {
     const exists = await authRepository.existsByUsername(username);
     if (!exists) {
-      return result.failure(new Error('User not found'));
+      return result.failure({ message: 'User not found', httpStatusCode: 404 });
     }
 
     return result.success({ accessToken: authHelpers.signAccessToken({ id, username, email }) });
