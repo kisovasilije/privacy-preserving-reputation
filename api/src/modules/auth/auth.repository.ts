@@ -18,4 +18,8 @@ export const authRepository = {
   getById: async (id: number): Promise<User | null> => {
     return prisma.user.findUnique({ where: { id } });
   },
+
+  getAll: async (): Promise<User[]> => {
+    return prisma.user.findMany();
+  },
 };

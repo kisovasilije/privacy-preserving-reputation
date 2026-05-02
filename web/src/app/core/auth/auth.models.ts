@@ -23,3 +23,9 @@ export interface RegisterResponse {
 export interface RefreshResponse {
   accessToken: string;
 }
+
+export interface AvailableUser {
+  id: number;
+  username: string;
+  email?: string;
+}

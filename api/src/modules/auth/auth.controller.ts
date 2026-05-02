@@ -31,4 +31,9 @@ export const authController = {
 
     return ok(res, result.value);
   },
+
+  getAll: async (_: Request, res: Response): Promise<Response | void> => {
+    const users = await authService.getAll();
+    return ok(res, users);
+  },
 };

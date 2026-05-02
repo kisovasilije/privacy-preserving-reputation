@@ -4,6 +4,7 @@ import { firstValueFrom, map, of, tap } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { API_BASE_URL } from '../config/api.config';
 import {
+  AvailableUser,
   LoginRequest,
   LoginResponse,
   RefreshResponse,
@@ -32,6 +33,10 @@ export class AuthService {
       tap(({ accessToken }) => this.authStore.setSession(accessToken, this.authStore.username())),
       map(({ accessToken }) => accessToken),
     );
+  }
+
+  getUsers() {
+    return this.http.get<AvailableUser[]>(`${API_BASE_URL}/auth/users`);
   }
 
   async initializeSession(): Promise<void> {

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -8,9 +8,12 @@ import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { AvailableUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
 import { getApiErrorMessage } from '../../core/http/api-error.util';
+import { SubmitRatingRequest } from '../../core/ratings/ratings.models';
+import { RatingsService } from '../../core/ratings/ratings.service';
 import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
 
@@ -65,6 +68,12 @@ function parseDateParts(
   return parsedDate;
 }
 
+function toInteger(value: unknown): number | null {
+  const numericValue =
+    typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+  return Number.isInteger(numericValue) ? numericValue : null;
+}
+
 const roundScheduleValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const opensAtDateValue = control.get('opensAtDate')?.value as Date | null;
   const opensAtTimeValue = control.get('opensAtTime')?.value as string;
@@ -117,6 +126,7 @@ export class HomePageComponent implements OnInit {
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly ratingsService = inject(RatingsService);
   private readonly roundsService = inject(RoundsService);
   private readonly dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
@@ -127,12 +137,19 @@ export class HomePageComponent implements OnInit {
   protected readonly roundsLoading = signal(true);
   protected readonly roundsFetchError = signal<string | null>(null);
   protected readonly openedRounds = signal<OpenedRound[]>([]);
+  protected readonly usersLoading = signal(true);
+  protected readonly usersFetchError = signal<string | null>(null);
+  protected readonly availableUsers = signal<AvailableUser[]>([]);
   protected readonly createPending = signal(false);
+  protected readonly createFeedbackMessage = signal<string | null>(null);
+  protected readonly createFeedbackTone = signal<'success' | 'error' | null>(null);
+  protected readonly ratingPending = signal(false);
   protected readonly closePendingById = signal<Record<number, boolean>>({});
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly statusTone = signal<'success' | 'error' | null>(null);
   protected readonly hourOptions = Array.from({ length: 24 }, (_, index) => `${index}`.padStart(2, '0'));
   protected readonly minuteOptions = ['00', '30'];
+  protected readonly ratingValueOptions = [1, 2, 3, 4, 5];
   protected readonly createRoundForm = this.formBuilder.group(
     {
       title: ['', [trimmedTextValidator({ min: 3, max: 128, required: true })]],
@@ -144,9 +161,16 @@ export class HomePageComponent implements OnInit {
     },
     { validators: [roundScheduleValidator] },
   );
+  protected readonly ratingForm = this.formBuilder.group({
+    roundId: [null as number | null, [Validators.required]],
+    value: [null as number | null, [Validators.required, Validators.min(1), Validators.max(5)]],
+    targetId: [null as number | null, [Validators.required]],
+    comment: ['', [trimmedTextValidator({ max: 1024 })]],
+  });
 
   ngOnInit(): void {
     this.loadOpenedRounds();
+    this.loadAvailableUsers();
   }
 
   protected renewAccessToken(): void {
@@ -183,19 +207,38 @@ export class HomePageComponent implements OnInit {
     });
   }
 
+  protected loadAvailableUsers(): void {
+    this.usersLoading.set(true);
+    this.usersFetchError.set(null);
+
+    this.authService.getUsers().subscribe({
+      next: (users) => {
+        this.usersLoading.set(false);
+        this.availableUsers.set(users.filter((user) => this.isAvailableRatingTarget(user)));
+      },
+      error: (error: unknown) => {
+        this.usersLoading.set(false);
+        this.usersFetchError.set(getApiErrorMessage(error, 'We could not load available users right now.'));
+      },
+    });
+  }
+
   protected submitCreateRound(): void {
     if (this.createRoundForm.invalid) {
       this.createRoundForm.markAllAsTouched();
+      this.setCreateFeedback('error', 'Round was not created. Check the highlighted fields and try again.');
       return;
     }
 
     const request = this.buildCreateRoundRequest();
     if (!request) {
       this.createRoundForm.markAllAsTouched();
+      this.setCreateFeedback('error', 'Round was not created. Check the schedule and try again.');
       return;
     }
 
     this.clearStatus();
+    this.clearCreateFeedback();
     this.createPending.set(true);
 
     this.roundsService.createRound(request).subscribe({
@@ -209,14 +252,15 @@ export class HomePageComponent implements OnInit {
           closesAtDate: null,
           closesAtTime: '',
         });
-        this.statusTone.set('success');
-        this.statusMessage.set(this.isFutureRound(request) ? 'Round created. It will appear once it opens.' : 'Round created and is now open for ratings.');
+        this.setCreateFeedback(
+          'success',
+          this.isFutureRound(request) ? 'Round created. It will appear once it opens.' : 'Round created and is now open for ratings.',
+        );
         this.loadOpenedRounds();
       },
       error: (error: unknown) => {
         this.createPending.set(false);
-        this.statusTone.set('error');
-        this.statusMessage.set(getApiErrorMessage(error, 'We could not create the round.'));
+        this.setCreateFeedback('error', getApiErrorMessage(error, 'Round was not created. Try again.'));
       },
     });
   }
@@ -244,6 +288,51 @@ export class HomePageComponent implements OnInit {
     });
   }
 
+  protected selectRoundForRating(round: OpenedRound): void {
+    this.ratingForm.controls.roundId.setValue(round.id);
+    this.ratingForm.controls.roundId.markAsDirty();
+  }
+
+  protected selectRatingValue(value: number): void {
+    this.ratingForm.controls.value.setValue(value);
+    this.ratingForm.controls.value.markAsDirty();
+  }
+
+  protected submitRating(): void {
+    if (this.ratingForm.invalid) {
+      this.ratingForm.markAllAsTouched();
+      return;
+    }
+
+    const request = this.buildSubmitRatingRequest();
+    if (!request) {
+      this.ratingForm.markAllAsTouched();
+      return;
+    }
+
+    this.clearStatus();
+    this.ratingPending.set(true);
+
+    this.ratingsService.submitRating(request).subscribe({
+      next: () => {
+        this.ratingPending.set(false);
+        this.ratingForm.reset({
+          roundId: request.roundId,
+          value: null,
+          targetId: null,
+          comment: '',
+        });
+        this.statusTone.set('success');
+        this.statusMessage.set('Rating submitted.');
+      },
+      error: (error: unknown) => {
+        this.ratingPending.set(false);
+        this.statusTone.set('error');
+        this.statusMessage.set(getApiErrorMessage(error, 'We could not submit the rating.'));
+      },
+    });
+  }
+
   protected formatDateTime(value: string): string {
     return this.dateTimeFormatter.format(new Date(value));
   }
@@ -254,6 +343,14 @@ export class HomePageComponent implements OnInit {
 
   protected isClosePending(roundId: number): boolean {
     return this.closePendingById()[roundId] === true;
+  }
+
+  protected isSelectedForRating(roundId: number): boolean {
+    return toInteger(this.ratingForm.controls.roundId.value) === roundId;
+  }
+
+  protected getUserOptionLabel(user: AvailableUser): string {
+    return user.email ? `${user.username} (${user.email})` : `${user.username} #${user.id}`;
   }
 
   protected getTitleErrorMessage(): string {
@@ -316,6 +413,12 @@ export class HomePageComponent implements OnInit {
     return null;
   }
 
+  protected getCommentErrorMessage(): string {
+    return this.ratingForm.controls.comment.hasError('maxlength')
+      ? 'Comment must be 1024 characters or fewer.'
+      : '';
+  }
+
   private buildCreateRoundRequest(): CreateRoundRequest | null {
     const { title, description, opensAtDate, opensAtTime, closesAtDate, closesAtTime } = this.createRoundForm.getRawValue();
     const closesAt = parseDateParts(closesAtDate, closesAtTime);
@@ -348,6 +451,35 @@ export class HomePageComponent implements OnInit {
     return request.opensAt != null && new Date(request.opensAt) > new Date();
   }
 
+  private buildSubmitRatingRequest(): SubmitRatingRequest | null {
+    const { roundId, value, targetId, comment } = this.ratingForm.getRawValue();
+    const normalizedRoundId = toInteger(roundId);
+    const normalizedValue = toInteger(value);
+    const normalizedTargetId = toInteger(targetId);
+
+    if (
+      normalizedRoundId == null ||
+      normalizedValue == null ||
+      normalizedValue < 1 ||
+      normalizedValue > 5 ||
+      normalizedTargetId == null
+    ) {
+      return null;
+    }
+
+    const request: SubmitRatingRequest = {
+      roundId: normalizedRoundId,
+      value: normalizedValue,
+      targetId: normalizedTargetId,
+    };
+    const normalizedComment = (comment ?? '').trim();
+    if (normalizedComment) {
+      request.comment = normalizedComment;
+    }
+
+    return request;
+  }
+
   private setClosePending(roundId: number, pending: boolean): void {
     this.closePendingById.update((current) => {
       const next = { ...current };
@@ -364,5 +496,19 @@ export class HomePageComponent implements OnInit {
   private clearStatus(): void {
     this.statusMessage.set(null);
     this.statusTone.set(null);
+  }
+
+  private isAvailableRatingTarget(user: AvailableUser): boolean {
+    return Number.isInteger(user.id) && user.id !== this.authStore.userId();
+  }
+
+  private setCreateFeedback(tone: 'success' | 'error', message: string): void {
+    this.createFeedbackTone.set(tone);
+    this.createFeedbackMessage.set(message);
+  }
+
+  private clearCreateFeedback(): void {
+    this.createFeedbackMessage.set(null);
+    this.createFeedbackTone.set(null);
   }
 }

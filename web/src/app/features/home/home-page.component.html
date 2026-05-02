@@ -34,87 +34,176 @@
 }
 
 <section class="rounds-layout">
-  <mat-card class="page-card create-card" appearance="outlined">
-    <span class="eyebrow eyebrow--muted">Create Round</span>
-    <h2>Open a new rating round</h2>
-    <p class="section-copy">
-      Start a new round for private feedback. Set when it begins and when it closes.
-    </p>
+  <div class="rounds-sidebar">
+    <mat-card class="page-card create-card" appearance="outlined">
+      <span class="eyebrow eyebrow--muted">Create Round</span>
+      <h2>Open a new rating round</h2>
+      <p class="section-copy">
+        Start a new round for private feedback. Set when it begins and when it closes.
+      </p>
 
-    <form class="round-form" [formGroup]="createRoundForm" (ngSubmit)="submitCreateRound()">
-      <mat-form-field appearance="outline">
-        <mat-label>Title</mat-label>
-        <input matInput formControlName="title" />
-        @if (createRoundForm.controls.title.touched && getTitleErrorMessage()) {
-          <mat-error>{{ getTitleErrorMessage() }}</mat-error>
-        }
-      </mat-form-field>
+      <form class="round-form" [formGroup]="createRoundForm" (ngSubmit)="submitCreateRound()">
+        <mat-form-field appearance="outline">
+          <mat-label>Title</mat-label>
+          <input matInput formControlName="title" />
+          @if (createRoundForm.controls.title.touched && getTitleErrorMessage()) {
+            <mat-error>{{ getTitleErrorMessage() }}</mat-error>
+          }
+        </mat-form-field>
 
-      <mat-form-field appearance="outline">
-        <mat-label>Description</mat-label>
-        <textarea matInput formControlName="description" rows="4"></textarea>
-        @if (createRoundForm.controls.description.touched && getDescriptionErrorMessage()) {
-          <mat-error>{{ getDescriptionErrorMessage() }}</mat-error>
-        }
-      </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description" rows="4"></textarea>
+          @if (createRoundForm.controls.description.touched && getDescriptionErrorMessage()) {
+            <mat-error>{{ getDescriptionErrorMessage() }}</mat-error>
+          }
+        </mat-form-field>
 
-      <div class="date-time-group">
-        <div class="date-time-group__header">Opens at</div>
-        <div class="date-time-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Date</mat-label>
-            <input matInput [matDatepicker]="opensAtPicker" formControlName="opensAtDate" />
-            <mat-datepicker-toggle matIconSuffix [for]="opensAtPicker"></mat-datepicker-toggle>
-            <mat-datepicker #opensAtPicker></mat-datepicker>
-          </mat-form-field>
+        <div class="date-time-group">
+          <div class="date-time-group__header">Opens at</div>
+          <div class="date-time-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Date</mat-label>
+              <input matInput [matDatepicker]="opensAtPicker" formControlName="opensAtDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="opensAtPicker"></mat-datepicker-toggle>
+              <mat-datepicker #opensAtPicker></mat-datepicker>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Time</mat-label>
-            <mat-select formControlName="opensAtTime">
-              @for (hour of hourOptions; track hour) {
-                @for (minute of minuteOptions; track minute) {
-                  <mat-option [value]="hour + ':' + minute">{{ hour }}:{{ minute }}</mat-option>
+            <mat-form-field appearance="outline">
+              <mat-label>Time</mat-label>
+              <mat-select formControlName="opensAtTime">
+                @for (hour of hourOptions; track hour) {
+                  @for (minute of minuteOptions; track minute) {
+                    <mat-option [value]="hour + ':' + minute">{{ hour }}:{{ minute }}</mat-option>
+                  }
                 }
-              }
-            </mat-select>
-          </mat-form-field>
+              </mat-select>
+            </mat-form-field>
+          </div>
         </div>
-      </div>
 
-      <div class="date-time-group">
-        <div class="date-time-group__header">Closes at</div>
-        <div class="date-time-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Date</mat-label>
-            <input matInput [matDatepicker]="closesAtPicker" formControlName="closesAtDate" />
-            <mat-datepicker-toggle matIconSuffix [for]="closesAtPicker"></mat-datepicker-toggle>
-            <mat-datepicker #closesAtPicker></mat-datepicker>
-          </mat-form-field>
+        <div class="date-time-group">
+          <div class="date-time-group__header">Closes at</div>
+          <div class="date-time-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Date</mat-label>
+              <input matInput [matDatepicker]="closesAtPicker" formControlName="closesAtDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="closesAtPicker"></mat-datepicker-toggle>
+              <mat-datepicker #closesAtPicker></mat-datepicker>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Time</mat-label>
-            <mat-select formControlName="closesAtTime">
-              @for (hour of hourOptions; track hour) {
-                @for (minute of minuteOptions; track minute) {
-                  <mat-option [value]="hour + ':' + minute">{{ hour }}:{{ minute }}</mat-option>
+            <mat-form-field appearance="outline">
+              <mat-label>Time</mat-label>
+              <mat-select formControlName="closesAtTime">
+                @for (hour of hourOptions; track hour) {
+                  @for (minute of minuteOptions; track minute) {
+                    <mat-option [value]="hour + ':' + minute">{{ hour }}:{{ minute }}</mat-option>
+                  }
                 }
-              }
-            </mat-select>
-          </mat-form-field>
+              </mat-select>
+            </mat-form-field>
+          </div>
         </div>
-      </div>
 
-      @if (getScheduleErrorMessage(); as message) {
-        <div class="form-hint form-hint--error">{{ message }}</div>
-      }
+        @if (getScheduleErrorMessage(); as message) {
+          <div class="form-hint form-hint--error">{{ message }}</div>
+        }
 
-      <div class="form-actions">
-        <button mat-flat-button type="submit" [disabled]="createPending()">
-          {{ createPending() ? 'Creating round...' : 'Create round' }}
-        </button>
-      </div>
-    </form>
-  </mat-card>
+        <div class="form-actions">
+          <button mat-flat-button type="submit" [disabled]="createPending()">
+            {{ createPending() ? 'Creating round...' : 'Create round' }}
+          </button>
+        </div>
+
+        @if (createFeedbackMessage(); as message) {
+          <div
+            class="form-feedback"
+            [class.form-feedback--success]="createFeedbackTone() === 'success'"
+            [class.form-feedback--error]="createFeedbackTone() === 'error'"
+          >
+            {{ message }}
+          </div>
+        }
+      </form>
+    </mat-card>
+
+    <mat-card class="page-card rating-card" appearance="outlined">
+      <span class="eyebrow eyebrow--muted">Submit Rating</span>
+      <h2>Rate a target user</h2>
+      <p class="section-copy">
+        Pick an opened round, choose a value from 1 through 5, and select the target user.
+      </p>
+
+      <form class="round-form rating-form" [formGroup]="ratingForm" (ngSubmit)="submitRating()">
+        <mat-form-field appearance="outline">
+          <mat-label>Round</mat-label>
+          <mat-select formControlName="roundId">
+            @for (round of openedRounds(); track round.id) {
+              <mat-option [value]="round.id">{{ round.title }}</mat-option>
+            }
+          </mat-select>
+          @if (ratingForm.controls.roundId.touched && ratingForm.controls.roundId.hasError('required')) {
+            <mat-error>Choose an opened round.</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="rating-value-field">
+          <div class="date-time-group__header">Rating</div>
+          <div class="rating-options" role="radiogroup" aria-label="Rating value">
+            @for (value of ratingValueOptions; track value) {
+              <button
+                class="rating-option"
+                type="button"
+                role="radio"
+                [class.rating-option--selected]="ratingForm.controls.value.value === value"
+                [attr.aria-checked]="ratingForm.controls.value.value === value"
+                (click)="selectRatingValue(value)"
+              >
+                {{ value }}
+              </button>
+            }
+          </div>
+          @if (ratingForm.controls.value.touched && ratingForm.controls.value.invalid) {
+            <div class="form-hint form-hint--error">Pick a rating from 1 through 5.</div>
+          }
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Target user</mat-label>
+          <mat-select formControlName="targetId">
+            @if (usersLoading()) {
+              <mat-option disabled>Loading users...</mat-option>
+            } @else if (usersFetchError()) {
+              <mat-option disabled>{{ usersFetchError() }}</mat-option>
+            } @else if (!availableUsers().length) {
+              <mat-option disabled>No users available</mat-option>
+            } @else {
+              @for (user of availableUsers(); track user.id) {
+                <mat-option [value]="user.id">{{ getUserOptionLabel(user) }}</mat-option>
+              }
+            }
+          </mat-select>
+          @if (ratingForm.controls.targetId.touched && ratingForm.controls.targetId.hasError('required')) {
+            <mat-error>Choose a target user.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Comment</mat-label>
+          <textarea matInput formControlName="comment" rows="4"></textarea>
+          @if (ratingForm.controls.comment.touched && getCommentErrorMessage()) {
+            <mat-error>{{ getCommentErrorMessage() }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-flat-button type="submit" [disabled]="ratingPending()">
+            {{ ratingPending() ? 'Submitting rating...' : 'Submit rating' }}
+          </button>
+        </div>
+      </form>
+    </mat-card>
+  </div>
 
   <mat-card class="page-card opened-rounds-card" appearance="outlined">
     <div class="rounds-header">
@@ -148,7 +237,11 @@
     } @else {
       <div class="rounds-grid">
         @for (round of openedRounds(); track round.id) {
-          <article class="round-card">
+          <article
+            class="round-card"
+            [class.round-card--selected]="isSelectedForRating(round.id)"
+            (click)="selectRoundForRating(round)"
+          >
             <div class="round-card__header">
               <div>
                 <h3>{{ round.title }}</h3>
@@ -156,6 +249,9 @@
                   <span class="owner-badge">Your round</span>
                 }
               </div>
+              @if (isSelectedForRating(round.id)) {
+                <span class="selected-badge">Selected</span>
+              }
             </div>
 
             @if (round.description) {
@@ -173,13 +269,17 @@
               </div>
             </div>
 
-            @if (isOwner(round)) {
-              <div class="round-card__actions">
-                <button mat-button type="button" (click)="closeRound(round.id)" [disabled]="isClosePending(round.id)">
+            <div class="round-card__actions">
+              <button mat-button type="button" (click)="$event.stopPropagation(); selectRoundForRating(round)">
+                {{ isSelectedForRating(round.id) ? 'Selected for rating' : 'Use for rating' }}
+              </button>
+
+              @if (isOwner(round)) {
+                <button mat-button type="button" (click)="$event.stopPropagation(); closeRound(round.id)" [disabled]="isClosePending(round.id)">
                   {{ isClosePending(round.id) ? 'Closing...' : 'Close early' }}
                 </button>
-              </div>
-            }
+              }
+            </div>
           </article>
         }
       </div>

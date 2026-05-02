@@ -44,4 +44,8 @@ export const authService = {
   getById: async (id: number): Promise<User | null> => {
     return await authRepository.getById(id);
   },
+
+  getAll: async (): Promise<User[]> => {
+    return await authRepository.getAll();
+  },
 };

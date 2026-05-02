@@ -12,4 +12,6 @@ authRouter.post('/register', withBodyV2(registrationSchema, authController.regis
 
 authRouter.get('/refresh', isAuthenticated, authController.refresh);
 
+authRouter.get('/users', isAuthenticated, authController.getAll);
+
 // authRouter.post('/logout', async (req, res) => {});

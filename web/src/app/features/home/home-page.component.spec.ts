@@ -4,12 +4,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
+import { RatingsService } from '../../core/ratings/ratings.service';
 import { OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
 import { HomePageComponent } from './home-page.component';
 
 describe('HomePageComponent', () => {
   let fixture: ComponentFixture<HomePageComponent>;
+  let ratingsService: jasmine.SpyObj<RatingsService>;
   let roundsService: jasmine.SpyObj<RoundsService>;
 
   const authStoreStub = {
@@ -18,7 +20,7 @@ describe('HomePageComponent', () => {
     userId: signal(5),
   };
 
-  const authServiceStub = jasmine.createSpyObj<AuthService>('AuthService', ['refreshSession']);
+  const authServiceStub = jasmine.createSpyObj<AuthService>('AuthService', ['refreshSession', 'getUsers']);
 
   const buildRound = (id: number, authorId: number, title = `Round ${id}`): OpenedRound => ({
     id,
@@ -32,8 +34,14 @@ describe('HomePageComponent', () => {
   });
 
   beforeEach(async () => {
+    ratingsService = jasmine.createSpyObj<RatingsService>('RatingsService', ['submitRating']);
     roundsService = jasmine.createSpyObj<RoundsService>('RoundsService', ['getOpenedRounds', 'createRound', 'closeRound']);
     authServiceStub.refreshSession.and.returnValue(of('token'));
+    authServiceStub.getUsers.and.returnValue(of([
+      { id: 2, username: 'bob', email: 'bob@example.com' },
+      { id: 5, username: 'alice', email: 'alice@example.com' },
+    ]));
+    ratingsService.submitRating.and.returnValue(of(void 0));
     roundsService.getOpenedRounds.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -41,6 +49,7 @@ describe('HomePageComponent', () => {
       providers: [
         { provide: AuthStore, useValue: authStoreStub },
         { provide: AuthService, useValue: authServiceStub },
+        { provide: RatingsService, useValue: ratingsService },
         { provide: RoundsService, useValue: roundsService },
       ],
     }).compileComponents();
@@ -159,6 +168,72 @@ describe('HomePageComponent', () => {
       closesAtTime: '',
     });
     expect(fixture.nativeElement.textContent).toContain('Round created and is now open for ratings.');
+  });
+
+  it('selects a round for rating when a round card is clicked', () => {
+    roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
+
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('.round-card') as HTMLElement).click();
+    fixture.detectChanges();
+
+    expect((fixture.componentInstance as any).ratingForm.controls.roundId.value).toBe(6);
+    expect(fixture.nativeElement.textContent).toContain('Selected');
+  });
+
+  it('loads available target users without the signed-in user', () => {
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as any;
+
+    expect(authServiceStub.getUsers).toHaveBeenCalled();
+    expect(component.availableUsers()).toEqual([
+      { id: 2, username: 'bob', email: 'bob@example.com' },
+    ]);
+  });
+
+  it('does not submit the rating form when it is invalid', () => {
+    fixture.detectChanges();
+
+    (fixture.componentInstance as any).submitRating();
+    fixture.detectChanges();
+
+    expect(ratingsService.submitRating).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain('Choose an opened round.');
+    expect(fixture.nativeElement.textContent).toContain('Pick a rating from 1 through 5.');
+    expect(fixture.nativeElement.textContent).toContain('Choose a target user.');
+  });
+
+  it('submits ratings with the selected round, value, target, and trimmed comment', () => {
+    roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
+
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as any;
+    component.ratingForm.setValue({
+      roundId: 6,
+      value: 5,
+      targetId: 2,
+      comment: '  Reliable, clear communication, delivered on time.  ',
+    });
+
+    component.submitRating();
+    fixture.detectChanges();
+
+    expect(ratingsService.submitRating).toHaveBeenCalledWith({
+      value: 5,
+      comment: 'Reliable, clear communication, delivered on time.',
+      roundId: 6,
+      targetId: 2,
+    });
+    expect(component.ratingForm.getRawValue()).toEqual({
+      roundId: 6,
+      value: null,
+      targetId: null,
+      comment: '',
+    });
+    expect(fixture.nativeElement.textContent).toContain('Rating submitted.');
   });
 
   it('shows backend validation errors when create fails', () => {

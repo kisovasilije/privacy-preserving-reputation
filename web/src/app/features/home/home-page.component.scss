@@ -77,13 +77,20 @@ p {
 
 .rounds-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
   gap: 1.5rem;
   margin-top: 1.5rem;
   align-items: start;
 }
 
+.rounds-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 .create-card,
+.rating-card,
 .opened-rounds-card {
   padding: 1.5rem;
   border-radius: 1.5rem;
@@ -145,6 +152,60 @@ mat-form-field {
   margin-top: 0.5rem;
 }
 
+.form-feedback {
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.9rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.form-feedback--success {
+  background: rgba(46, 125, 50, 0.12);
+  color: #1b5e20;
+}
+
+.form-feedback--error {
+  background: rgba(198, 40, 40, 0.1);
+  color: #8e1b1b;
+}
+
+.rating-value-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.rating-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.rating-option {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+  border-radius: 0.8rem;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  font-weight: 800;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.rating-option:hover,
+.rating-option:focus-visible {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.14);
+  outline: 0;
+}
+
+.rating-option--selected {
+  border-color: #1976d2;
+  background: #1976d2;
+  color: white;
+}
+
 .rounds-header {
   display: flex;
   align-items: flex-start;
@@ -183,6 +244,28 @@ mat-form-field {
   border-radius: 1.25rem;
   background: color-mix(in srgb, var(--mat-sys-surface) 94%, white);
   border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 38%, transparent);
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.round-card:hover,
+.round-card:focus-visible {
+  border-color: color-mix(in srgb, #1976d2 55%, var(--mat-sys-outline-variant));
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  outline: 0;
+  transform: translateY(-1px);
+}
+
+.round-card--selected {
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.14);
+}
+
+.round-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .round-card__header h3 {
@@ -200,6 +283,19 @@ mat-form-field {
   color: #125ea7;
   font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.selected-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(46, 125, 50, 0.12);
+  color: #1b5e20;
+  font-size: 0.78rem;
+  font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -230,6 +326,8 @@ mat-form-field {
 .round-card__actions {
   margin-top: auto;
   display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   justify-content: flex-start;
 }
 
