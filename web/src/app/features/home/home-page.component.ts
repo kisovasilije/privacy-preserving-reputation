@@ -1,5 +1,12 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
@@ -14,10 +21,19 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { getApiErrorMessage } from '../../core/http/api-error.util';
 import { SubmitRatingRequest } from '../../core/ratings/ratings.models';
 import { RatingsService } from '../../core/ratings/ratings.service';
-import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models';
+import {
+  CreateRoundRequest,
+  OpenedRound,
+} from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
+import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
+import { commit } from '../../utils/commitment.util';
 
-function trimmedTextValidator(config: { min?: number; max?: number; required?: boolean }): ValidatorFn {
+function trimmedTextValidator(config: {
+  min?: number;
+  max?: number;
+  required?: boolean;
+}): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const value = typeof control.value === 'string' ? control.value.trim() : '';
 
@@ -26,23 +42,30 @@ function trimmedTextValidator(config: { min?: number; max?: number; required?: b
     }
 
     if (config.min != null && value.length < config.min) {
-      return { minlength: { requiredLength: config.min, actualLength: value.length } };
+      return {
+        minlength: { requiredLength: config.min, actualLength: value.length },
+      };
     }
 
     if (config.max != null && value.length > config.max) {
-      return { maxlength: { requiredLength: config.max, actualLength: value.length } };
+      return {
+        maxlength: { requiredLength: config.max, actualLength: value.length },
+      };
     }
 
     return null;
   };
 }
 
-function parseDateValue(dateValue: Date | string | null | undefined): Date | null {
+function parseDateValue(
+  dateValue: Date | string | null | undefined,
+): Date | null {
   if (!dateValue) {
     return null;
   }
 
-  const parsed = dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue);
+  const parsed =
+    dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -70,11 +93,17 @@ function parseDateParts(
 
 function toInteger(value: unknown): number | null {
   const numericValue =
-    typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim()
+        ? Number(value)
+        : NaN;
   return Number.isInteger(numericValue) ? numericValue : null;
 }
 
-const roundScheduleValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+const roundScheduleValidator: ValidatorFn = (
+  control: AbstractControl,
+): ValidationErrors | null => {
   const opensAtDateValue = control.get('opensAtDate')?.value as Date | null;
   const opensAtTimeValue = control.get('opensAtTime')?.value as string;
   const closesAtDateValue = control.get('closesAtDate')?.value as Date | null;
@@ -142,12 +171,16 @@ export class HomePageComponent implements OnInit {
   protected readonly availableUsers = signal<AvailableUser[]>([]);
   protected readonly createPending = signal(false);
   protected readonly createFeedbackMessage = signal<string | null>(null);
-  protected readonly createFeedbackTone = signal<'success' | 'error' | null>(null);
+  protected readonly createFeedbackTone = signal<'success' | 'error' | null>(
+    null,
+  );
   protected readonly ratingPending = signal(false);
   protected readonly closePendingById = signal<Record<number, boolean>>({});
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly statusTone = signal<'success' | 'error' | null>(null);
-  protected readonly hourOptions = Array.from({ length: 24 }, (_, index) => `${index}`.padStart(2, '0'));
+  protected readonly hourOptions = Array.from({ length: 24 }, (_, index) =>
+    `${index}`.padStart(2, '0'),
+  );
   protected readonly minuteOptions = ['00', '30'];
   protected readonly ratingValueOptions = [1, 2, 3, 4, 5];
   protected readonly createRoundForm = this.formBuilder.group(
@@ -163,7 +196,10 @@ export class HomePageComponent implements OnInit {
   );
   protected readonly ratingForm = this.formBuilder.group({
     roundId: [null as number | null, [Validators.required]],
-    value: [null as number | null, [Validators.required, Validators.min(1), Validators.max(5)]],
+    value: [
+      null as number | null,
+      [Validators.required, Validators.min(1), Validators.max(5)],
+    ],
     targetId: [null as number | null, [Validators.required]],
     comment: ['', [trimmedTextValidator({ max: 1024 })]],
   });
@@ -186,7 +222,12 @@ export class HomePageComponent implements OnInit {
       error: (error: unknown) => {
         this.refreshing.set(false);
         this.statusTone.set('error');
-        this.statusMessage.set(getApiErrorMessage(error, 'We could not reopen your private rating space right now.'));
+        this.statusMessage.set(
+          getApiErrorMessage(
+            error,
+            'We could not reopen your private rating space right now.',
+          ),
+        );
       },
     });
   }
@@ -202,7 +243,12 @@ export class HomePageComponent implements OnInit {
       },
       error: (error: unknown) => {
         this.roundsLoading.set(false);
-        this.roundsFetchError.set(getApiErrorMessage(error, 'We could not load opened rounds right now.'));
+        this.roundsFetchError.set(
+          getApiErrorMessage(
+            error,
+            'We could not load opened rounds right now.',
+          ),
+        );
       },
     });
   }
@@ -214,11 +260,18 @@ export class HomePageComponent implements OnInit {
     this.authService.getUsers().subscribe({
       next: (users) => {
         this.usersLoading.set(false);
-        this.availableUsers.set(users.filter((user) => this.isAvailableRatingTarget(user)));
+        this.availableUsers.set(
+          users.filter((user) => this.isAvailableRatingTarget(user)),
+        );
       },
       error: (error: unknown) => {
         this.usersLoading.set(false);
-        this.usersFetchError.set(getApiErrorMessage(error, 'We could not load available users right now.'));
+        this.usersFetchError.set(
+          getApiErrorMessage(
+            error,
+            'We could not load available users right now.',
+          ),
+        );
       },
     });
   }
@@ -226,14 +279,20 @@ export class HomePageComponent implements OnInit {
   protected submitCreateRound(): void {
     if (this.createRoundForm.invalid) {
       this.createRoundForm.markAllAsTouched();
-      this.setCreateFeedback('error', 'Round was not created. Check the highlighted fields and try again.');
+      this.setCreateFeedback(
+        'error',
+        'Round was not created. Check the highlighted fields and try again.',
+      );
       return;
     }
 
     const request = this.buildCreateRoundRequest();
     if (!request) {
       this.createRoundForm.markAllAsTouched();
-      this.setCreateFeedback('error', 'Round was not created. Check the schedule and try again.');
+      this.setCreateFeedback(
+        'error',
+        'Round was not created. Check the schedule and try again.',
+      );
       return;
     }
 
@@ -254,13 +313,18 @@ export class HomePageComponent implements OnInit {
         });
         this.setCreateFeedback(
           'success',
-          this.isFutureRound(request) ? 'Round created. It will appear once it opens.' : 'Round created and is now open for ratings.',
+          this.isFutureRound(request)
+            ? 'Round created. It will appear once it opens.'
+            : 'Round created and is now open for ratings.',
         );
         this.loadOpenedRounds();
       },
       error: (error: unknown) => {
         this.createPending.set(false);
-        this.setCreateFeedback('error', getApiErrorMessage(error, 'Round was not created. Try again.'));
+        this.setCreateFeedback(
+          'error',
+          getApiErrorMessage(error, 'Round was not created. Try again.'),
+        );
       },
     });
   }
@@ -283,7 +347,9 @@ export class HomePageComponent implements OnInit {
       error: (error: unknown) => {
         this.setClosePending(roundId, false);
         this.statusTone.set('error');
-        this.statusMessage.set(getApiErrorMessage(error, 'We could not close the round.'));
+        this.statusMessage.set(
+          getApiErrorMessage(error, 'We could not close the round.'),
+        );
       },
     });
   }
@@ -304,33 +370,42 @@ export class HomePageComponent implements OnInit {
       return;
     }
 
-    const request = this.buildSubmitRatingRequest();
-    if (!request) {
-      this.ratingForm.markAllAsTouched();
-      return;
-    }
+    let req: SubmitRatingRequest;
+    this.buildSubmitRatingRequest()
+      .pipe(
+        switchMap((request) => {
+          if (!request) {
+            this.ratingForm.markAllAsTouched();
+            return EMPTY;
+          }
 
-    this.clearStatus();
-    this.ratingPending.set(true);
+          this.clearStatus();
+          this.ratingPending.set(true);
 
-    this.ratingsService.submitRating(request).subscribe({
-      next: () => {
-        this.ratingPending.set(false);
-        this.ratingForm.reset({
-          roundId: request.roundId,
-          value: null,
-          targetId: null,
-          comment: '',
-        });
-        this.statusTone.set('success');
-        this.statusMessage.set('Rating submitted.');
-      },
-      error: (error: unknown) => {
-        this.ratingPending.set(false);
-        this.statusTone.set('error');
-        this.statusMessage.set(getApiErrorMessage(error, 'We could not submit the rating.'));
-      },
-    });
+          req = request;
+          return this.ratingsService.submitRating(request);
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.ratingPending.set(false);
+          this.ratingForm.reset({
+            roundId: req.roundId,
+            value: null,
+            targetId: null,
+            comment: '',
+          });
+          this.statusTone.set('success');
+          this.statusMessage.set('Rating submitted.');
+        },
+        error: (error: unknown) => {
+          this.ratingPending.set(false);
+          this.statusTone.set('error');
+          this.statusMessage.set(
+            getApiErrorMessage(error, 'We could not submit the rating.'),
+          );
+        },
+      });
   }
 
   protected formatDateTime(value: string): string {
@@ -350,7 +425,9 @@ export class HomePageComponent implements OnInit {
   }
 
   protected getUserOptionLabel(user: AvailableUser): string {
-    return user.email ? `${user.username} (${user.email})` : `${user.username} #${user.id}`;
+    return user.email
+      ? `${user.username} (${user.email})`
+      : `${user.username} #${user.id}`;
   }
 
   protected getTitleErrorMessage(): string {
@@ -382,11 +459,18 @@ export class HomePageComponent implements OnInit {
     const closesAtDateControl = form.controls.closesAtDate;
     const closesAtTimeControl = form.controls.closesAtTime;
 
-    if (!closesAtDateControl.touched && !closesAtTimeControl.touched && !form.touched) {
+    if (
+      !closesAtDateControl.touched &&
+      !closesAtTimeControl.touched &&
+      !form.touched
+    ) {
       return null;
     }
 
-    if (!closesAtDateControl.value || !(closesAtTimeControl.value ?? '').trim()) {
+    if (
+      !closesAtDateControl.value ||
+      !(closesAtTimeControl.value ?? '').trim()
+    ) {
       return 'Closing date and time are required.';
     }
 
@@ -420,7 +504,14 @@ export class HomePageComponent implements OnInit {
   }
 
   private buildCreateRoundRequest(): CreateRoundRequest | null {
-    const { title, description, opensAtDate, opensAtTime, closesAtDate, closesAtTime } = this.createRoundForm.getRawValue();
+    const {
+      title,
+      description,
+      opensAtDate,
+      opensAtTime,
+      closesAtDate,
+      closesAtTime,
+    } = this.createRoundForm.getRawValue();
     const closesAt = parseDateParts(closesAtDate, closesAtTime);
 
     if (!closesAt) {
@@ -451,7 +542,7 @@ export class HomePageComponent implements OnInit {
     return request.opensAt != null && new Date(request.opensAt) > new Date();
   }
 
-  private buildSubmitRatingRequest(): SubmitRatingRequest | null {
+  private buildSubmitRatingRequest(): Observable<SubmitRatingRequest | null> {
     const { roundId, value, targetId, comment } = this.ratingForm.getRawValue();
     const normalizedRoundId = toInteger(roundId);
     const normalizedValue = toInteger(value);
@@ -464,20 +555,26 @@ export class HomePageComponent implements OnInit {
       normalizedValue > 5 ||
       normalizedTargetId == null
     ) {
-      return null;
+      return of(null);
     }
 
-    const request: SubmitRatingRequest = {
-      roundId: normalizedRoundId,
-      value: normalizedValue,
-      targetId: normalizedTargetId,
-    };
-    const normalizedComment = (comment ?? '').trim();
-    if (normalizedComment) {
-      request.comment = normalizedComment;
-    }
+    return from(commit(normalizedValue)).pipe(
+      map(({ commitment, nonce }) => {
+        const request: SubmitRatingRequest = {
+          roundId: normalizedRoundId,
+          value: normalizedValue,
+          targetId: normalizedTargetId,
+          commitment,
+        };
 
-    return request;
+        const normalizedComment = (comment ?? '').trim();
+        if (normalizedComment) {
+          request.comment = normalizedComment;
+        }
+
+        return request;
+      }),
+    );
   }
 
   private setClosePending(roundId: number, pending: boolean): void {
