@@ -34,6 +34,7 @@ describe('HomePageComponent', () => {
   });
 
   beforeEach(async () => {
+    authStoreStub.userId.set(5);
     ratingsService = jasmine.createSpyObj<RatingsService>('RatingsService', ['submitRating']);
     roundsService = jasmine.createSpyObj<RoundsService>('RoundsService', ['getOpenedRounds', 'createRound', 'closeRound']);
     authServiceStub.refreshSession.and.returnValue(of('token'));
@@ -205,7 +206,7 @@ describe('HomePageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Choose a target user.');
   });
 
-  it('submits ratings with the selected round, value, target, and trimmed comment', () => {
+  it('submits ratings with the selected round, value, target, commitment, and trimmed comment', async () => {
     roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
 
     fixture.detectChanges();
@@ -219,14 +220,17 @@ describe('HomePageComponent', () => {
     });
 
     component.submitRating();
+    await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(ratingsService.submitRating).toHaveBeenCalledWith({
+    const request = ratingsService.submitRating.calls.mostRecent().args[0];
+    expect(request).toEqual(jasmine.objectContaining({
       value: 5,
       comment: 'Reliable, clear communication, delivered on time.',
       roundId: 6,
       targetId: 2,
-    });
+    }));
+    expect(request.commitment).toMatch(/^[a-f0-9]{64}$/);
     expect(component.ratingForm.getRawValue()).toEqual({
       roundId: 6,
       value: null,

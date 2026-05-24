@@ -24,6 +24,7 @@ describe('RatingsService', () => {
   it('should submit a rating with the provided payload', () => {
     const payload = {
       value: 5,
+      commitment: 'abc123',
       comment: 'Reliable, clear communication, delivered on time.',
       roundId: 6,
       targetId: 2,

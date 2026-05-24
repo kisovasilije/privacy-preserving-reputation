@@ -547,19 +547,28 @@ export class HomePageComponent implements OnInit {
     const normalizedRoundId = toInteger(roundId);
     const normalizedValue = toInteger(value);
     const normalizedTargetId = toInteger(targetId);
+    const normalizedRaterId = toInteger(this.authStore.userId());
 
     if (
       normalizedRoundId == null ||
       normalizedValue == null ||
       normalizedValue < 1 ||
       normalizedValue > 5 ||
-      normalizedTargetId == null
+      normalizedTargetId == null ||
+      normalizedRaterId == null
     ) {
       return of(null);
     }
 
-    return from(commit(normalizedValue)).pipe(
-      map(({ commitment, nonce }) => {
+    return from(
+      commit({
+        rating: normalizedValue,
+        roundId: normalizedRoundId,
+        targetId: normalizedTargetId,
+        raterId: normalizedRaterId,
+      }),
+    ).pipe(
+      map(({ commitment }) => {
         const request: SubmitRatingRequest = {
           roundId: normalizedRoundId,
           value: normalizedValue,

@@ -5,7 +5,7 @@ export const sha256 = async (message: string): Promise<string> => {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   return hashHex;
-}
+};
 
 export const generateNonce = (): string => {
   const bytes = new Uint8Array(32);
@@ -13,13 +13,25 @@ export const generateNonce = (): string => {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
+};
+
+export interface CommitmentMessage {
+  rating: number;
+  roundId: number;
+  targetId: number;
+  raterId: number;
 }
 
-export const commit = async (rating: number) => {
+export const createCommitmentPayload = (
+  { rating, roundId, targetId, raterId }: CommitmentMessage,
+  nonce: string,
+): string => JSON.stringify({ rating, roundId, targetId, raterId, nonce });
+
+export const commit = async (message: CommitmentMessage) => {
   const nonce = generateNonce();
 
-  const payload = JSON.stringify({ rating, nonce });
+  const payload = createCommitmentPayload(message, nonce);
   const commitment = await sha256(payload);
 
   return { commitment, nonce };
-}
+};
