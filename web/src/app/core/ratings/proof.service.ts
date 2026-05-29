@@ -85,7 +85,6 @@ export class ProofService {
     const F = poseidon.F;
     const hash = poseidon(payload);
     return F.toString(hash);
-    // return '0'; // Placeholder until Poseidon is implemented
   }
 
   public async generateProof(request: GenerateProofRequest) {
@@ -110,14 +109,6 @@ export class ProofService {
       targetId,
       commitment,
     } as const;
-
-    const wasmPath = `${ProofService.ARTIFACTS_BASE_PATH}/rating.wasm`;
-    const zkeyPath = `${ProofService.ARTIFACTS_BASE_PATH}/rating_final.zkey`;
-
-    const wasmRes = await fetch(wasmPath);
-    console.log('WASM status:', wasmRes.status);
-    console.log('WASM content-type:', wasmRes.headers.get('content-type'));
-    console.log('WASM URL:', wasmRes.url);
 
     const { proof, publicSignals } = await groth16.fullProve(
       circuitInput,
