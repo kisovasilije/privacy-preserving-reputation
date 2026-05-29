@@ -21,13 +21,11 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { getApiErrorMessage } from '../../core/http/api-error.util';
 import { SubmitRatingRequest } from '../../core/ratings/ratings.models';
 import { RatingsService } from '../../core/ratings/ratings.service';
-import {
-  CreateRoundRequest,
-  OpenedRound,
-} from '../../core/rounds/rounds.models';
+import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
 import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
 import { commit } from '../../utils/commitment.util';
+import { ProofService } from '../../core/ratings/proof.service';
 
 function trimmedTextValidator(config: {
   min?: number;
@@ -57,15 +55,12 @@ function trimmedTextValidator(config: {
   };
 }
 
-function parseDateValue(
-  dateValue: Date | string | null | undefined,
-): Date | null {
+function parseDateValue(dateValue: Date | string | null | undefined): Date | null {
   if (!dateValue) {
     return null;
   }
 
-  const parsed =
-    dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue);
+  const parsed = dateValue instanceof Date ? new Date(dateValue) : new Date(dateValue);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -101,9 +96,7 @@ function toInteger(value: unknown): number | null {
   return Number.isInteger(numericValue) ? numericValue : null;
 }
 
-const roundScheduleValidator: ValidatorFn = (
-  control: AbstractControl,
-): ValidationErrors | null => {
+const roundScheduleValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const opensAtDateValue = control.get('opensAtDate')?.value as Date | null;
   const opensAtTimeValue = control.get('opensAtTime')?.value as string;
   const closesAtDateValue = control.get('closesAtDate')?.value as Date | null;
@@ -157,6 +150,7 @@ export class HomePageComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly ratingsService = inject(RatingsService);
   private readonly roundsService = inject(RoundsService);
+  private readonly proofService = inject(ProofService);
   private readonly dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -171,9 +165,7 @@ export class HomePageComponent implements OnInit {
   protected readonly availableUsers = signal<AvailableUser[]>([]);
   protected readonly createPending = signal(false);
   protected readonly createFeedbackMessage = signal<string | null>(null);
-  protected readonly createFeedbackTone = signal<'success' | 'error' | null>(
-    null,
-  );
+  protected readonly createFeedbackTone = signal<'success' | 'error' | null>(null);
   protected readonly ratingPending = signal(false);
   protected readonly closePendingById = signal<Record<number, boolean>>({});
   protected readonly statusMessage = signal<string | null>(null);
@@ -196,10 +188,7 @@ export class HomePageComponent implements OnInit {
   );
   protected readonly ratingForm = this.formBuilder.group({
     roundId: [null as number | null, [Validators.required]],
-    value: [
-      null as number | null,
-      [Validators.required, Validators.min(1), Validators.max(5)],
-    ],
+    value: [null as number | null, [Validators.required, Validators.min(1), Validators.max(5)]],
     targetId: [null as number | null, [Validators.required]],
     comment: ['', [trimmedTextValidator({ max: 1024 })]],
   });
@@ -223,10 +212,7 @@ export class HomePageComponent implements OnInit {
         this.refreshing.set(false);
         this.statusTone.set('error');
         this.statusMessage.set(
-          getApiErrorMessage(
-            error,
-            'We could not reopen your private rating space right now.',
-          ),
+          getApiErrorMessage(error, 'We could not reopen your private rating space right now.'),
         );
       },
     });
@@ -244,10 +230,7 @@ export class HomePageComponent implements OnInit {
       error: (error: unknown) => {
         this.roundsLoading.set(false);
         this.roundsFetchError.set(
-          getApiErrorMessage(
-            error,
-            'We could not load opened rounds right now.',
-          ),
+          getApiErrorMessage(error, 'We could not load opened rounds right now.'),
         );
       },
     });
@@ -260,17 +243,12 @@ export class HomePageComponent implements OnInit {
     this.authService.getUsers().subscribe({
       next: (users) => {
         this.usersLoading.set(false);
-        this.availableUsers.set(
-          users.filter((user) => this.isAvailableRatingTarget(user)),
-        );
+        this.availableUsers.set(users.filter((user) => this.isAvailableRatingTarget(user)));
       },
       error: (error: unknown) => {
         this.usersLoading.set(false);
         this.usersFetchError.set(
-          getApiErrorMessage(
-            error,
-            'We could not load available users right now.',
-          ),
+          getApiErrorMessage(error, 'We could not load available users right now.'),
         );
       },
     });
@@ -289,10 +267,7 @@ export class HomePageComponent implements OnInit {
     const request = this.buildCreateRoundRequest();
     if (!request) {
       this.createRoundForm.markAllAsTouched();
-      this.setCreateFeedback(
-        'error',
-        'Round was not created. Check the schedule and try again.',
-      );
+      this.setCreateFeedback('error', 'Round was not created. Check the schedule and try again.');
       return;
     }
 
@@ -347,9 +322,7 @@ export class HomePageComponent implements OnInit {
       error: (error: unknown) => {
         this.setClosePending(roundId, false);
         this.statusTone.set('error');
-        this.statusMessage.set(
-          getApiErrorMessage(error, 'We could not close the round.'),
-        );
+        this.statusMessage.set(getApiErrorMessage(error, 'We could not close the round.'));
       },
     });
   }
@@ -401,9 +374,7 @@ export class HomePageComponent implements OnInit {
         error: (error: unknown) => {
           this.ratingPending.set(false);
           this.statusTone.set('error');
-          this.statusMessage.set(
-            getApiErrorMessage(error, 'We could not submit the rating.'),
-          );
+          this.statusMessage.set(getApiErrorMessage(error, 'We could not submit the rating.'));
         },
       });
   }
@@ -425,9 +396,7 @@ export class HomePageComponent implements OnInit {
   }
 
   protected getUserOptionLabel(user: AvailableUser): string {
-    return user.email
-      ? `${user.username} (${user.email})`
-      : `${user.username} #${user.id}`;
+    return user.email ? `${user.username} (${user.email})` : `${user.username} #${user.id}`;
   }
 
   protected getTitleErrorMessage(): string {
@@ -459,18 +428,11 @@ export class HomePageComponent implements OnInit {
     const closesAtDateControl = form.controls.closesAtDate;
     const closesAtTimeControl = form.controls.closesAtTime;
 
-    if (
-      !closesAtDateControl.touched &&
-      !closesAtTimeControl.touched &&
-      !form.touched
-    ) {
+    if (!closesAtDateControl.touched && !closesAtTimeControl.touched && !form.touched) {
       return null;
     }
 
-    if (
-      !closesAtDateControl.value ||
-      !(closesAtTimeControl.value ?? '').trim()
-    ) {
+    if (!closesAtDateControl.value || !(closesAtTimeControl.value ?? '').trim()) {
       return 'Closing date and time are required.';
     }
 
@@ -504,14 +466,8 @@ export class HomePageComponent implements OnInit {
   }
 
   private buildCreateRoundRequest(): CreateRoundRequest | null {
-    const {
-      title,
-      description,
-      opensAtDate,
-      opensAtTime,
-      closesAtDate,
-      closesAtTime,
-    } = this.createRoundForm.getRawValue();
+    const { title, description, opensAtDate, opensAtTime, closesAtDate, closesAtTime } =
+      this.createRoundForm.getRawValue();
     const closesAt = parseDateParts(closesAtDate, closesAtTime);
 
     if (!closesAt) {
@@ -560,15 +516,40 @@ export class HomePageComponent implements OnInit {
       return of(null);
     }
 
+    // return from(
+    //   this.proofService.generateProof({
+    //     rating: normalizedValue,
+    //     roundId: normalizedRoundId,
+    //     targetId: normalizedTargetId,
+    //     raterId: normalizedRaterId,
+    //   }),
+    // ).pipe(
+    //   map(({ proof, publicSignals, commitment }) => {
+    //     const request: SubmitRatingRequest = {
+    //       roundId: normalizedRoundId,
+    //       value: normalizedValue,
+    //       targetId: normalizedTargetId,
+    //       commitment,
+    //     };
+
+    //     const normalizedComment = (comment ?? '').trim();
+    //     if (normalizedComment) {
+    //       request.comment = normalizedComment;
+    //     }
+
+    //     return request;
+    //   }),
+    // );
+
     return from(
-      commit({
+      this.proofService.generateProof({
         rating: normalizedValue,
         roundId: normalizedRoundId,
-        targetId: normalizedTargetId,
         raterId: normalizedRaterId,
+        targetId: normalizedTargetId,
       }),
     ).pipe(
-      map(({ commitment }) => {
+      map(({ proof, publicSignals, commitment }) => {
         const request: SubmitRatingRequest = {
           roundId: normalizedRoundId,
           value: normalizedValue,
