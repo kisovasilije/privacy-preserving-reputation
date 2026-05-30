@@ -13,6 +13,12 @@ export class RatingController {
       return res.status(error.httpStatusCode || 500).json(error.message);
     }
 
-    return res.status(201).json(result.value!);
+    return res.status(201).json({
+      id: result.value!.id,
+      roundId: result.value!.roundId,
+      raterId: result.value!.raterId,
+      targetId: result.value!.targetId,
+      comment: result.value!.comment,
+    });
   };
 }
