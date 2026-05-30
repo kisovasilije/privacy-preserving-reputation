@@ -155,7 +155,6 @@ p {
 }
 
 .create-card,
-.rating-card,
 .opened-rounds-card {
   padding: 1.5rem;
   border-radius: 1.5rem;
@@ -232,43 +231,6 @@ mat-form-field {
 .form-feedback--error {
   background: rgba(198, 40, 40, 0.1);
   color: #8e1b1b;
-}
-
-.rating-value-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  margin-bottom: 0.5rem;
-}
-
-.rating-options {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.45rem;
-}
-
-.rating-option {
-  min-height: 44px;
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
-  border-radius: 0.8rem;
-  background: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  cursor: pointer;
-  font-weight: 800;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
-}
-
-.rating-option:hover,
-.rating-option:focus-visible {
-  border-color: #1976d2;
-  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.14);
-  outline: 0;
-}
-
-.rating-option--selected {
-  border-color: #1976d2;
-  background: #1976d2;
-  color: white;
 }
 
 .rounds-header {

@@ -1,6 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
@@ -46,7 +47,7 @@ describe('HomePageComponent', () => {
     roundsService.getOpenedRounds.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
-      imports: [HomePageComponent],
+      imports: [HomePageComponent, NoopAnimationsModule],
       providers: [
         { provide: AuthStore, useValue: authStoreStub },
         { provide: AuthService, useValue: authServiceStub },
@@ -195,15 +196,19 @@ describe('HomePageComponent', () => {
   });
 
   it('does not submit the rating form when it is invalid', () => {
+    roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
+
     fixture.detectChanges();
 
-    (fixture.componentInstance as any).submitRating();
+    getButtonsByText(fixture, 'Rate')[0].click();
+    fixture.detectChanges();
+
+    getDocumentButtonsByText('Submit rating')[0].click();
     fixture.detectChanges();
 
     expect(ratingsService.submitRating).not.toHaveBeenCalled();
-    expect(fixture.nativeElement.textContent).toContain('Choose an opened round.');
-    expect(fixture.nativeElement.textContent).toContain('Pick a rating from 1 through 5.');
-    expect(fixture.nativeElement.textContent).toContain('Choose a target user.');
+    expect(document.body.textContent).toContain('Pick a rating from 1 through 5.');
+    expect(document.body.textContent).toContain('Choose a target user.');
   });
 
   it('submits ratings with the selected round, value, target, commitment, and trimmed comment', async () => {
@@ -270,4 +275,10 @@ function getButtonsByText(fixture: ComponentFixture<HomePageComponent>, text: st
 
 function getButtons(fixture: ComponentFixture<HomePageComponent>): HTMLButtonElement[] {
   return Array.from(fixture.nativeElement.querySelectorAll('button'));
+}
+
+function getDocumentButtonsByText(text: string): HTMLButtonElement[] {
+  return Array.from(document.body.querySelectorAll('button')).filter(
+    (button) => (button.textContent?.trim() ?? '') === text,
+  );
 }

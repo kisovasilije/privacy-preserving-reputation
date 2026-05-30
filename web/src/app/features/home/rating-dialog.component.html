@@ -1,0 +1,67 @@
+<h2 mat-dialog-title>Rate a target user</h2>
+
+<mat-dialog-content>
+  <p class="dialog-copy">
+    Submit a private rating for <strong>{{ data.selectedRound.title }}</strong>.
+  </p>
+
+  <form class="rating-form" [formGroup]="data.form" (ngSubmit)="submit()">
+    <div class="rating-value-field">
+      <div class="field-label">Rating</div>
+      <div class="rating-options" role="radiogroup" aria-label="Rating value">
+        @for (value of data.ratingValueOptions; track value) {
+          <button
+            class="rating-option"
+            type="button"
+            role="radio"
+            [class.rating-option--selected]="data.form.controls['value'].value === value"
+            [attr.aria-checked]="data.form.controls['value'].value === value"
+            (click)="selectRatingValue(value)"
+          >
+            {{ value }}
+          </button>
+        }
+      </div>
+      @if (data.form.controls['value'].touched && data.form.controls['value'].invalid) {
+        <div class="form-hint form-hint--error">Pick a rating from 1 through 5.</div>
+      }
+    </div>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Target user</mat-label>
+      <mat-select formControlName="targetId">
+        @if (data.usersLoading()) {
+          <mat-option disabled>Loading users...</mat-option>
+        } @else if (data.usersFetchError()) {
+          <mat-option disabled>{{ data.usersFetchError() }}</mat-option>
+        } @else if (!data.availableUsers().length) {
+          <mat-option disabled>No users available</mat-option>
+        } @else {
+          @for (user of data.availableUsers(); track user.id) {
+            <mat-option [value]="user.id">{{ data.getUserOptionLabel(user) }}</mat-option>
+          }
+        }
+      </mat-select>
+      @if (data.form.controls['targetId'].touched && data.form.controls['targetId'].hasError('required')) {
+        <mat-error>Choose a target user.</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Comment</mat-label>
+      <textarea matInput formControlName="comment" rows="4"></textarea>
+      @if (data.form.controls['comment'].touched && data.getCommentErrorMessage()) {
+        <mat-error>{{ data.getCommentErrorMessage() }}</mat-error>
+      }
+    </mat-form-field>
+
+    <button class="submit-proxy" type="submit" aria-hidden="true" tabindex="-1"></button>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" mat-dialog-close>Cancel</button>
+  <button mat-flat-button type="button" [disabled]="data.ratingPending()" (click)="submit()">
+    {{ data.ratingPending() ? 'Submitting rating...' : 'Submit rating' }}
+  </button>
+</mat-dialog-actions>

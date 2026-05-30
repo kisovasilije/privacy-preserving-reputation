@@ -10,6 +10,7 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -24,8 +25,8 @@ import { RatingsService } from '../../core/ratings/ratings.service';
 import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
 import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
-import { commit } from '../../utils/commitment.util';
 import { ProofService } from '../../core/ratings/proof.service';
+import { RatingDialogComponent, RatingDialogData } from './rating-dialog.component';
 
 function trimmedTextValidator(config: {
   min?: number;
@@ -134,6 +135,7 @@ const roundScheduleValidator: ValidatorFn = (control: AbstractControl): Validati
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatNativeDateModule,
@@ -151,6 +153,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   private readonly ratingsService = inject(RatingsService);
   private readonly roundsService = inject(RoundsService);
   private readonly proofService = inject(ProofService);
+  private readonly dialog = inject(MatDialog);
   private readonly dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -338,9 +341,33 @@ export class HomePageComponent implements OnInit, OnDestroy {
     this.ratingForm.controls.roundId.markAsDirty();
   }
 
-  protected selectRatingValue(value: number): void {
-    this.ratingForm.controls.value.setValue(value);
-    this.ratingForm.controls.value.markAsDirty();
+  protected openRatingDialog(round: OpenedRound): void {
+    this.selectRoundForRating(round);
+
+    const dialogRef = this.dialog.open<RatingDialogComponent, RatingDialogData, 'submit'>(
+      RatingDialogComponent,
+      {
+        data: {
+          availableUsers: () => this.availableUsers(),
+          form: this.ratingForm,
+          getCommentErrorMessage: () => this.getCommentErrorMessage(),
+          getUserOptionLabel: (user) => this.getUserOptionLabel(user),
+          ratingPending: () => this.ratingPending(),
+          ratingValueOptions: this.ratingValueOptions,
+          selectedRound: round,
+          usersFetchError: () => this.usersFetchError(),
+          usersLoading: () => this.usersLoading(),
+        },
+        maxWidth: 'calc(100vw - 2rem)',
+        width: '520px',
+      },
+    );
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result === 'submit') {
+        this.submitRating();
+      }
+    });
   }
 
   protected submitRating(): void {

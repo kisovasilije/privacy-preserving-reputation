@@ -144,82 +144,6 @@
       </form>
     </mat-card>
 
-    <mat-card class="page-card rating-card" appearance="outlined">
-      <span class="eyebrow eyebrow--muted">Submit Rating</span>
-      <h2>Rate a target user</h2>
-      <p class="section-copy">
-        Pick an opened round, choose a value from 1 through 5, and select the target user.
-      </p>
-
-      <form class="round-form rating-form" [formGroup]="ratingForm" (ngSubmit)="submitRating()">
-        <mat-form-field appearance="outline">
-          <mat-label>Round</mat-label>
-          <mat-select formControlName="roundId">
-            @for (round of openedRounds(); track round.id) {
-              <mat-option [value]="round.id">{{ round.title }}</mat-option>
-            }
-          </mat-select>
-          @if (ratingForm.controls.roundId.touched && ratingForm.controls.roundId.hasError('required')) {
-            <mat-error>Choose an opened round.</mat-error>
-          }
-        </mat-form-field>
-
-        <div class="rating-value-field">
-          <div class="date-time-group__header">Rating</div>
-          <div class="rating-options" role="radiogroup" aria-label="Rating value">
-            @for (value of ratingValueOptions; track value) {
-              <button
-                class="rating-option"
-                type="button"
-                role="radio"
-                [class.rating-option--selected]="ratingForm.controls.value.value === value"
-                [attr.aria-checked]="ratingForm.controls.value.value === value"
-                (click)="selectRatingValue(value)"
-              >
-                {{ value }}
-              </button>
-            }
-          </div>
-          @if (ratingForm.controls.value.touched && ratingForm.controls.value.invalid) {
-            <div class="form-hint form-hint--error">Pick a rating from 1 through 5.</div>
-          }
-        </div>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Target user</mat-label>
-          <mat-select formControlName="targetId">
-            @if (usersLoading()) {
-              <mat-option disabled>Loading users...</mat-option>
-            } @else if (usersFetchError()) {
-              <mat-option disabled>{{ usersFetchError() }}</mat-option>
-            } @else if (!availableUsers().length) {
-              <mat-option disabled>No users available</mat-option>
-            } @else {
-              @for (user of availableUsers(); track user.id) {
-                <mat-option [value]="user.id">{{ getUserOptionLabel(user) }}</mat-option>
-              }
-            }
-          </mat-select>
-          @if (ratingForm.controls.targetId.touched && ratingForm.controls.targetId.hasError('required')) {
-            <mat-error>Choose a target user.</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Comment</mat-label>
-          <textarea matInput formControlName="comment" rows="4"></textarea>
-          @if (ratingForm.controls.comment.touched && getCommentErrorMessage()) {
-            <mat-error>{{ getCommentErrorMessage() }}</mat-error>
-          }
-        </mat-form-field>
-
-        <div class="form-actions">
-          <button mat-flat-button type="submit" [disabled]="ratingPending()">
-            {{ ratingPending() ? 'Submitting rating...' : 'Submit rating' }}
-          </button>
-        </div>
-      </form>
-    </mat-card>
   </div>
 
   <mat-card class="page-card opened-rounds-card" appearance="outlined">
@@ -287,8 +211,8 @@
             </div>
 
             <div class="round-card__actions">
-              <button mat-button type="button" (click)="$event.stopPropagation(); selectRoundForRating(round)">
-                {{ isSelectedForRating(round.id) ? 'Selected for rating' : 'Use for rating' }}
+              <button mat-flat-button type="button" (click)="$event.stopPropagation(); openRatingDialog(round)">
+                Rate
               </button>
 
               @if (isOwner(round)) {
