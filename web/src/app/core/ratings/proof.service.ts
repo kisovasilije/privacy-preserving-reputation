@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { buildPoseidon, Poseidon } from 'circomlibjs';
+import { Poseidon } from 'circomlibjs';
 import { groth16 } from 'snarkjs';
 
 type CommitmentPayload = bigint[]; // [rating, roundId, targetId, raterId, randomness]

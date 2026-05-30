@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -143,7 +143,7 @@ const roundScheduleValidator: ValidatorFn = (control: AbstractControl): Validati
   templateUrl: './home-page.component.html',
   styleUrl: './home-page.component.scss',
 })
-export class HomePageComponent implements OnInit {
+export class HomePageComponent implements OnInit, OnDestroy {
   protected readonly authStore = inject(AuthStore);
 
   private readonly formBuilder = inject(FormBuilder);
@@ -167,6 +167,7 @@ export class HomePageComponent implements OnInit {
   protected readonly createFeedbackMessage = signal<string | null>(null);
   protected readonly createFeedbackTone = signal<'success' | 'error' | null>(null);
   protected readonly ratingPending = signal(false);
+  protected readonly ratingSuccessVisible = signal(false);
   protected readonly closePendingById = signal<Record<number, boolean>>({});
   protected readonly statusMessage = signal<string | null>(null);
   protected readonly statusTone = signal<'success' | 'error' | null>(null);
@@ -192,10 +193,15 @@ export class HomePageComponent implements OnInit {
     targetId: [null as number | null, [Validators.required]],
     comment: ['', [trimmedTextValidator({ max: 1024 })]],
   });
+  private ratingSuccessTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.loadOpenedRounds();
     this.loadAvailableUsers();
+  }
+
+  ngOnDestroy(): void {
+    this.clearRatingSuccessTimer();
   }
 
   protected renewAccessToken(): void {
@@ -344,16 +350,19 @@ export class HomePageComponent implements OnInit {
     }
 
     let req: SubmitRatingRequest;
+    this.clearStatus();
+    this.clearRatingSuccessTimer();
+    this.ratingSuccessVisible.set(false);
+    this.ratingPending.set(true);
+
     this.buildSubmitRatingRequest()
       .pipe(
         switchMap((request) => {
           if (!request) {
             this.ratingForm.markAllAsTouched();
+            this.ratingPending.set(false);
             return EMPTY;
           }
-
-          this.clearStatus();
-          this.ratingPending.set(true);
 
           req = request;
           return this.ratingsService.submitRating(request);
@@ -370,9 +379,11 @@ export class HomePageComponent implements OnInit {
           });
           this.statusTone.set('success');
           this.statusMessage.set('Rating submitted.');
+          this.showRatingSuccessFeedback();
         },
         error: (error: unknown) => {
           this.ratingPending.set(false);
+          this.ratingSuccessVisible.set(false);
           this.statusTone.set('error');
           this.statusMessage.set(getApiErrorMessage(error, 'We could not submit the rating.'));
         },
@@ -516,31 +527,6 @@ export class HomePageComponent implements OnInit {
       return of(null);
     }
 
-    // return from(
-    //   this.proofService.generateProof({
-    //     rating: normalizedValue,
-    //     roundId: normalizedRoundId,
-    //     targetId: normalizedTargetId,
-    //     raterId: normalizedRaterId,
-    //   }),
-    // ).pipe(
-    //   map(({ proof, publicSignals, commitment }) => {
-    //     const request: SubmitRatingRequest = {
-    //       roundId: normalizedRoundId,
-    //       value: normalizedValue,
-    //       targetId: normalizedTargetId,
-    //       commitment,
-    //     };
-
-    //     const normalizedComment = (comment ?? '').trim();
-    //     if (normalizedComment) {
-    //       request.comment = normalizedComment;
-    //     }
-
-    //     return request;
-    //   }),
-    // );
-
     return from(
       this.proofService.generateProof({
         rating: normalizedValue,
@@ -555,6 +541,8 @@ export class HomePageComponent implements OnInit {
           value: normalizedValue,
           targetId: normalizedTargetId,
           commitment,
+          proof,
+          publicSignals,
         };
 
         const normalizedComment = (comment ?? '').trim();
@@ -597,5 +585,20 @@ export class HomePageComponent implements OnInit {
   private clearCreateFeedback(): void {
     this.createFeedbackMessage.set(null);
     this.createFeedbackTone.set(null);
+  }
+
+  private showRatingSuccessFeedback(): void {
+    this.ratingSuccessVisible.set(true);
+    this.ratingSuccessTimer = setTimeout(() => {
+      this.ratingSuccessVisible.set(false);
+      this.ratingSuccessTimer = null;
+    }, 1600);
+  }
+
+  private clearRatingSuccessTimer(): void {
+    if (this.ratingSuccessTimer) {
+      clearTimeout(this.ratingSuccessTimer);
+      this.ratingSuccessTimer = null;
+    }
   }
 }

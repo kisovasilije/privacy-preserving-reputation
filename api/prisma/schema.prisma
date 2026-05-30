@@ -50,10 +50,12 @@ model Round {
 }
 
 model Rating {
-  id         Int     @id @default(autoincrement())
-  value      Int
-  commitment String
-  comment    String?
+  id            Int     @id @default(autoincrement())
+  value         Int
+  commitment    String
+  comment       String?
+  proof         Json    @db.JsonB
+  publicSignals Json    @db.JsonB
 
   round    Round @relation(fields: [roundId], references: [id])
   roundId  Int

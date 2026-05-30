@@ -33,6 +33,23 @@
   </div>
 }
 
+@if (ratingPending() || ratingSuccessVisible()) {
+  <div class="rating-feedback-overlay" role="status" aria-live="polite" aria-atomic="true">
+    <div
+      class="rating-feedback"
+      [class.rating-feedback--success]="ratingSuccessVisible() && !ratingPending()"
+    >
+      @if (ratingPending()) {
+        <mat-spinner diameter="54"></mat-spinner>
+        <span>Submitting rating...</span>
+      } @else {
+        <div class="rating-feedback__check" aria-hidden="true"></div>
+        <span>Rating submitted</span>
+      }
+    </div>
+  </div>
+}
+
 <section class="rounds-layout">
   <div class="rounds-sidebar">
     <mat-card class="page-card create-card" appearance="outlined">
