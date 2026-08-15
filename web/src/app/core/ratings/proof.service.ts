@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Poseidon } from 'circomlibjs';
 import { groth16 } from 'snarkjs';
+import { CIRCOM_FIELD_SIZE } from '../../utils/circom-field.util';
 
 type CommitmentPayload = bigint[]; // [rating, roundId, targetId, raterId, randomness]
 
@@ -57,10 +58,9 @@ function normalizeRating(value: number): string {
   providedIn: 'root',
 })
 export class ProofService {
-  private static ARTIFACTS_BASE_PATH = '/assets/zk';
+  private static readonly ARTIFACTS_BASE_PATH = '/assets/zk';
 
-  // prettier-ignore
-  public static FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+  public static readonly FIELD_SIZE = CIRCOM_FIELD_SIZE;
 
   private poseidonPromise?: Promise<Poseidon>;
 
