@@ -2,7 +2,8 @@
 
 <mat-dialog-content>
   <p class="dialog-copy">
-    Submit a private rating for <strong>{{ data.selectedRound.title }}</strong>.
+    Submit a private rating for <strong>{{ data.selectedRound.title }}</strong
+    >.
   </p>
 
   <form class="rating-form" [formGroup]="data.form" (ngSubmit)="submit()">
@@ -22,7 +23,7 @@
           </button>
         }
       </div>
-      @if (data.form.controls['value'].touched && data.form.controls['value'].invalid) {
+      @if (data.form.controls["value"].touched && data.form.controls["value"].invalid) {
         <div class="form-hint form-hint--error">Pick a rating from 1 through 5.</div>
       }
     </div>
@@ -42,7 +43,10 @@
           }
         }
       </mat-select>
-      @if (data.form.controls['targetId'].touched && data.form.controls['targetId'].hasError('required')) {
+      @if (
+        data.form.controls["targetId"].touched &&
+        data.form.controls["targetId"].hasError("required")
+      ) {
         <mat-error>Choose a target user.</mat-error>
       }
     </mat-form-field>
@@ -50,7 +54,7 @@
     <mat-form-field appearance="outline">
       <mat-label>Comment</mat-label>
       <textarea matInput formControlName="comment" rows="4"></textarea>
-      @if (data.form.controls['comment'].touched && data.getCommentErrorMessage()) {
+      @if (data.form.controls["comment"].touched && data.getCommentErrorMessage()) {
         <mat-error>{{ data.getCommentErrorMessage() }}</mat-error>
       }
     </mat-form-field>
@@ -58,9 +62,11 @@
     <fieldset class="privacy-options">
       <legend>Anonymous information</legend>
       <p>Choose which dedicated ID columns are left empty in the main rating record.</p>
-      <mat-checkbox formControlName="keepRaterIdAnonymous">Keep my user ID anonymous</mat-checkbox>
-      <mat-checkbox formControlName="keepTargetIdAnonymous">Keep target user ID anonymous</mat-checkbox>
-      <mat-checkbox formControlName="keepRoundIdAnonymous">Keep round ID anonymous</mat-checkbox>
+      <mat-checkbox formControlName="keepRaterIdAnonymous">Keep myself anonymous</mat-checkbox>
+      <mat-checkbox formControlName="keepTargetIdAnonymous"
+        >Keep user I'm rating anonymous</mat-checkbox
+      >
+      <mat-checkbox formControlName="keepRoundIdAnonymous">Keep this round anonymous</mat-checkbox>
     </fieldset>
 
     <button class="submit-proxy" type="submit" aria-hidden="true" tabindex="-1"></button>
@@ -70,6 +76,6 @@
 <mat-dialog-actions align="end">
   <button mat-button type="button" mat-dialog-close>Cancel</button>
   <button mat-flat-button type="button" [disabled]="data.ratingPending()" (click)="submit()">
-    {{ data.ratingPending() ? 'Submitting rating...' : 'Submit rating' }}
+    {{ data.ratingPending() ? "Submitting rating..." : "Submit rating" }}
   </button>
 </mat-dialog-actions>
