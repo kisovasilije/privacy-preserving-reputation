@@ -27,7 +27,10 @@ describe('HomePageComponent', () => {
     userId: signal(5),
   };
 
-  const authServiceStub = jasmine.createSpyObj<AuthService>('AuthService', ['refreshSession', 'getUsers']);
+  const authServiceStub = jasmine.createSpyObj<AuthService>('AuthService', [
+    'refreshSession',
+    'getUsers',
+  ]);
 
   const buildRound = (id: number, authorId: number, title = `Round ${id}`): OpenedRound => ({
     id,
@@ -44,7 +47,11 @@ describe('HomePageComponent', () => {
     authStoreStub.userId.set(5);
     proofService = jasmine.createSpyObj<ProofService>('ProofService', ['generateProof']);
     ratingsService = jasmine.createSpyObj<RatingsService>('RatingsService', ['submitRating']);
-    roundsService = jasmine.createSpyObj<RoundsService>('RoundsService', ['getOpenedRounds', 'createRound', 'closeRound']);
+    roundsService = jasmine.createSpyObj<RoundsService>('RoundsService', [
+      'getOpenedRounds',
+      'createRound',
+      'closeRound',
+    ]);
     trustedAuthoritiesService = jasmine.createSpyObj<TrustedAuthoritiesService>(
       'TrustedAuthoritiesService',
       ['submitRatingShares', 'getRatingSummary'],
@@ -61,19 +68,19 @@ describe('HomePageComponent', () => {
         protocol: 'groth16',
         curve: 'bn128',
       },
-      publicSignals: ['5', '6', '2', '9'],
+      publicSignals: ['6', '5', '2', '9'],
       commitment: 'a'.repeat(64),
     });
     authServiceStub.refreshSession.and.returnValue(of('token'));
-    authServiceStub.getUsers.and.returnValue(of([
-      { id: 2, username: 'bob', email: 'bob@example.com' },
-      { id: 5, username: 'alice', email: 'alice@example.com' },
-    ]));
+    authServiceStub.getUsers.and.returnValue(
+      of([
+        { id: 2, username: 'bob', email: 'bob@example.com' },
+        { id: 5, username: 'alice', email: 'alice@example.com' },
+      ]),
+    );
     ratingsService.submitRating.and.returnValue(of({ id: 42 }));
     trustedAuthoritiesService.submitRatingShares.and.returnValue(of([]));
-    trustedAuthoritiesService.getRatingSummary.and.returnValue(
-      of({ average: 4.5, count: 2 }),
-    );
+    trustedAuthoritiesService.getRatingSummary.and.returnValue(of({ average: 4.5, count: 2 }));
     roundsService.getOpenedRounds.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -216,7 +223,9 @@ describe('HomePageComponent', () => {
       closesAtDate: null,
       closesAtTime: '',
     });
-    expect(fixture.nativeElement.textContent).toContain('Round created and is now open for ratings.');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Round created and is now open for ratings.',
+    );
   });
 
   it('selects a round for rating when a round card is clicked', () => {
@@ -242,6 +251,15 @@ describe('HomePageComponent', () => {
     ]);
   });
 
+  it('keeps the rater ID anonymous by default', () => {
+    fixture.detectChanges();
+
+    const formValue = (fixture.componentInstance as any).ratingForm.getRawValue();
+    expect(formValue.keepRaterIdAnonymous).toBeTrue();
+    expect(formValue.keepTargetIdAnonymous).toBeFalse();
+    expect(formValue.keepRoundIdAnonymous).toBeFalse();
+  });
+
   it('does not submit the rating form when it is invalid', async () => {
     roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
 
@@ -259,7 +277,7 @@ describe('HomePageComponent', () => {
     expect(document.body.textContent).toContain('Choose a target user.');
   });
 
-  it('submits ratings with the selected round, value, target, commitment, and trimmed comment', async () => {
+  it('submits a rating without its private value or the anonymous-by-default rater ID', async () => {
     roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
 
     fixture.detectChanges();
@@ -270,6 +288,9 @@ describe('HomePageComponent', () => {
       value: 5,
       targetId: 2,
       comment: '  Reliable, clear communication, delivered on time.  ',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: false,
+      keepRoundIdAnonymous: false,
     });
 
     component.submitRating();
@@ -277,12 +298,15 @@ describe('HomePageComponent', () => {
     fixture.detectChanges();
 
     const request = ratingsService.submitRating.calls.mostRecent().args[0];
-    expect(request).toEqual(jasmine.objectContaining({
-      value: 5,
-      comment: 'Reliable, clear communication, delivered on time.',
-      roundId: 6,
-      targetId: 2,
-    }));
+    expect(request).toEqual(
+      jasmine.objectContaining({
+        comment: 'Reliable, clear communication, delivered on time.',
+        roundId: 6,
+        targetId: 2,
+      }),
+    );
+    expect('value' in request).toBeFalse();
+    expect(request.raterId).toBeUndefined();
     expect(request.commitment).toMatch(/^[a-f0-9]{64}$/);
     const sharePayloads = trustedAuthoritiesService.submitRatingShares.calls.mostRecent().args[0];
     expect(sharePayloads).toEqual([
@@ -302,8 +326,35 @@ describe('HomePageComponent', () => {
       value: null,
       targetId: null,
       comment: '',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: false,
+      keepRoundIdAnonymous: false,
     });
     expect(fixture.nativeElement.textContent).toContain('Rating submitted.');
+  });
+
+  it('omits every identifier selected for anonymity from the main API request', async () => {
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as any;
+    component.ratingForm.setValue({
+      roundId: 6,
+      value: 4,
+      targetId: 2,
+      comment: '',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: true,
+      keepRoundIdAnonymous: true,
+    });
+
+    component.submitRating();
+    await fixture.whenStable();
+
+    const request = ratingsService.submitRating.calls.mostRecent().args[0];
+    expect(request.raterId).toBeUndefined();
+    expect(request.targetId).toBeUndefined();
+    expect(request.roundId).toBeUndefined();
+    expect('value' in request).toBeFalse();
   });
 
   it('does not complete submission when the API omits the mandatory rating id', async () => {
@@ -317,6 +368,9 @@ describe('HomePageComponent', () => {
       value: 5,
       targetId: 2,
       comment: '',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: false,
+      keepRoundIdAnonymous: false,
     });
 
     component.submitRating();
@@ -329,6 +383,9 @@ describe('HomePageComponent', () => {
       value: 5,
       targetId: 2,
       comment: '',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: false,
+      keepRoundIdAnonymous: false,
     });
     expect(fixture.nativeElement.textContent).toContain('We could not submit the rating.');
   });
@@ -347,6 +404,9 @@ describe('HomePageComponent', () => {
       value: 5,
       targetId: 2,
       comment: '',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: false,
+      keepRoundIdAnonymous: false,
     });
 
     component.submitRating();
@@ -394,7 +454,10 @@ describe('HomePageComponent', () => {
   });
 });
 
-function getButtonsByText(fixture: ComponentFixture<HomePageComponent>, text: string): HTMLButtonElement[] {
+function getButtonsByText(
+  fixture: ComponentFixture<HomePageComponent>,
+  text: string,
+): HTMLButtonElement[] {
   return getButtons(fixture).filter((button) => (button.textContent?.trim() ?? '') === text);
 }
 

@@ -1,8 +1,7 @@
 export interface Rating {
   readonly id: number;
-  value: number;
   comment?: string;
-  readonly raterId: number;
-  readonly roundId: number;
-  readonly targetId: number;
+  readonly raterId: number | null;
+  readonly roundId: number | null;
+  readonly targetId: number | null;
 }

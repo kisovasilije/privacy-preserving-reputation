@@ -49,19 +49,17 @@ model Round {
 
 model Rating {
   id            Int     @id @default(autoincrement())
-  value         Int
   commitment    String
   comment       String?
   proof         Json    @db.JsonB
   publicSignals Json    @db.JsonB
 
-  round    Round @relation(fields: [roundId], references: [id])
-  roundId  Int
-  rater    User  @relation("RatingsRated", fields: [raterId], references: [id])
-  raterId  Int
-  target   User  @relation("RatingsReceived", fields: [targetId], references: [id])
-  targetId Int
+  round    Round? @relation(fields: [roundId], references: [id])
+  roundId  Int?
+  rater    User?  @relation("RatingsRated", fields: [raterId], references: [id])
+  raterId  Int?
+  target   User?  @relation("RatingsReceived", fields: [targetId], references: [id])
+  targetId Int?
 
-  @@unique([roundId, raterId, targetId])
   @@map("ratings")
 }

@@ -55,6 +55,14 @@
       }
     </mat-form-field>
 
+    <fieldset class="privacy-options">
+      <legend>Anonymous information</legend>
+      <p>Choose which dedicated ID columns are left empty in the main rating record.</p>
+      <mat-checkbox formControlName="keepRaterIdAnonymous">Keep my user ID anonymous</mat-checkbox>
+      <mat-checkbox formControlName="keepTargetIdAnonymous">Keep target user ID anonymous</mat-checkbox>
+      <mat-checkbox formControlName="keepRoundIdAnonymous">Keep round ID anonymous</mat-checkbox>
+    </fieldset>
+
     <button class="submit-proxy" type="submit" aria-hidden="true" tabindex="-1"></button>
   </form>
 </mat-dialog-content>

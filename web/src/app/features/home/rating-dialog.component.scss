@@ -38,7 +38,11 @@
   color: var(--mat-sys-on-surface);
   cursor: pointer;
   font-weight: 800;
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
 }
 
 .rating-option:hover,
@@ -62,6 +66,28 @@
 
 .form-hint--error {
   color: #8e1b1b;
+}
+
+.privacy-options {
+  display: flex;
+  margin: 0;
+  padding: 0.85rem 1rem 0.75rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+  border-radius: 0.8rem;
+}
+
+.privacy-options legend {
+  padding: 0 0.25rem;
+  font-weight: 700;
+}
+
+.privacy-options p {
+  margin: 0 0 0.25rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .submit-proxy {

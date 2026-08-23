@@ -139,6 +139,13 @@ const roundScheduleValidator: ValidatorFn = (control: AbstractControl): Validati
   return closesAt > opensAt ? null : { closesBeforeOpens: true };
 };
 
+interface RatingSubmission {
+  request: SubmitRatingRequest;
+  roundId: number;
+  targetId: number;
+  value: number;
+}
+
 @Component({
   selector: 'app-home-page',
   imports: [
@@ -207,6 +214,9 @@ export class HomePageComponent implements OnInit, OnDestroy {
     value: [null as number | null, [Validators.required, Validators.min(1), Validators.max(5)]],
     targetId: [null as number | null, [Validators.required]],
     comment: ['', [trimmedTextValidator({ max: 1024 })]],
+    keepRaterIdAnonymous: this.formBuilder.nonNullable.control(true),
+    keepTargetIdAnonymous: this.formBuilder.nonNullable.control(false),
+    keepRoundIdAnonymous: this.formBuilder.nonNullable.control(false),
   });
   private ratingSuccessTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -417,31 +427,34 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
     this.buildSubmitRatingRequest()
       .pipe(
-        switchMap((request) => {
-          if (!request) {
+        switchMap((submission) => {
+          if (!submission) {
             this.ratingForm.markAllAsTouched();
             this.ratingPending.set(false);
             return EMPTY;
           }
 
-          return this.ratingsService.submitRating(request).pipe(
-            map((response) => this.buildRatingSharePayloads(request, response)),
+          return this.ratingsService.submitRating(submission.request).pipe(
+            map((response) => this.buildRatingSharePayloads(submission, response)),
             switchMap((sharePayloads) =>
               this.trustedAuthoritiesService
                 .submitRatingShares(sharePayloads)
-                .pipe(map(() => request)),
+                .pipe(map(() => submission)),
             ),
           );
         }),
       )
       .subscribe({
-        next: (request) => {
+        next: (submission) => {
           this.ratingPending.set(false);
           this.ratingForm.reset({
-            roundId: request.roundId,
+            roundId: submission.roundId,
             value: null,
             targetId: null,
             comment: '',
+            keepRaterIdAnonymous: true,
+            keepTargetIdAnonymous: false,
+            keepRoundIdAnonymous: false,
           });
           this.statusTone.set('success');
           this.statusMessage.set('Rating submitted.');
@@ -575,8 +588,16 @@ export class HomePageComponent implements OnInit, OnDestroy {
     return request.opensAt != null && new Date(request.opensAt) > new Date();
   }
 
-  private buildSubmitRatingRequest(): Observable<SubmitRatingRequest | null> {
-    const { roundId, value, targetId, comment } = this.ratingForm.getRawValue();
+  private buildSubmitRatingRequest(): Observable<RatingSubmission | null> {
+    const {
+      roundId,
+      value,
+      targetId,
+      comment,
+      keepRaterIdAnonymous,
+      keepTargetIdAnonymous,
+      keepRoundIdAnonymous,
+    } = this.ratingForm.getRawValue();
     const normalizedRoundId = toInteger(roundId);
     const normalizedValue = toInteger(value);
     const normalizedTargetId = toInteger(targetId);
@@ -603,26 +624,40 @@ export class HomePageComponent implements OnInit, OnDestroy {
     ).pipe(
       map(({ proof, publicSignals, commitment }) => {
         const request: SubmitRatingRequest = {
-          roundId: normalizedRoundId,
-          value: normalizedValue,
-          targetId: normalizedTargetId,
           commitment,
           proof,
           publicSignals,
         };
+
+        if (!keepRoundIdAnonymous) {
+          request.roundId = normalizedRoundId;
+        }
+
+        if (!keepRaterIdAnonymous) {
+          request.raterId = normalizedRaterId;
+        }
+
+        if (!keepTargetIdAnonymous) {
+          request.targetId = normalizedTargetId;
+        }
 
         const normalizedComment = (comment ?? '').trim();
         if (normalizedComment) {
           request.comment = normalizedComment;
         }
 
-        return request;
+        return {
+          request,
+          roundId: normalizedRoundId,
+          targetId: normalizedTargetId,
+          value: normalizedValue,
+        };
       }),
     );
   }
 
   private buildRatingSharePayloads(
-    request: SubmitRatingRequest,
+    submission: RatingSubmission,
     response: SubmitRatingResponse,
   ): RatingSharePayloads {
     const ratingId = response.id;
@@ -630,12 +665,12 @@ export class HomePageComponent implements OnInit, OnDestroy {
       throw new Error('Rating submission response must include a positive integer id.');
     }
 
-    const shares = splitRating(request.value);
+    const shares = splitRating(submission.value);
     const buildPayload = (share: bigint): RatingSharePayload => ({
       ratingId,
       share: share.toString(),
-      targetId: request.targetId,
-      roundId: request.roundId,
+      targetId: submission.targetId,
+      roundId: submission.roundId,
     });
 
     return [buildPayload(shares[0]), buildPayload(shares[1]), buildPayload(shares[2])];

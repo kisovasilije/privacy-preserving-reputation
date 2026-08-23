@@ -18,11 +18,11 @@ const publicSignalsSchema = z.array(decimalStringSchema).length(4);
 
 export const createRatingSchema = z
   .object({
-    value: z.number().int().min(1).max(5),
     commitment: z.string(),
     comment: z.string().trim().max(1024).optional(),
-    roundId: z.number().int().positive(),
-    targetId: z.number().int().positive(),
+    roundId: z.number().int().positive().optional(),
+    raterId: z.number().int().positive().optional(),
+    targetId: z.number().int().positive().optional(),
     proof: groth16ProofSchema,
     publicSignals: publicSignalsSchema,
   })

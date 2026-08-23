@@ -23,10 +23,10 @@ describe('RatingsService', () => {
 
   it('should submit a rating with the provided payload', () => {
     const payload = {
-      value: 5,
       commitment: 'abc123',
       comment: 'Reliable, clear communication, delivered on time.',
       roundId: 6,
+      raterId: 5,
       targetId: 2,
       proof: {
         pi_a: ['1', '2', '1'],
@@ -39,7 +39,7 @@ describe('RatingsService', () => {
         protocol: 'groth16',
         curve: 'bn128',
       },
-      publicSignals: ['5', '6', '2', '9'],
+      publicSignals: ['6', '5', '2', '9'],
     };
 
     let response: unknown;
@@ -50,6 +50,7 @@ describe('RatingsService', () => {
     const request = httpMock.expectOne(`${API_BASE_URL}/ratings`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
+    expect(request.request.body.value).toBeUndefined();
     request.flush({ id: 42 });
     expect(response).toEqual({ id: 42 });
   });
