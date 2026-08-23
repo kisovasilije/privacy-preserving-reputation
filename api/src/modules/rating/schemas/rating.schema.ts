@@ -14,7 +14,7 @@ const groth16ProofSchema = z.object({
   curve: z.literal('bn128'),
 });
 
-const publicSignalsSchema = z.array(decimalStringSchema).length(4);
+const publicSignalsSchema = z.array(decimalStringSchema).length(7);
 
 export const createRatingSchema = z
   .object({

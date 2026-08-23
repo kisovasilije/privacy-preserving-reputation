@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import { Poseidon } from 'circomlibjs';
 import { groth16 } from 'snarkjs';
 import { CIRCOM_FIELD_SIZE } from '../../utils/circom-field.util';
+import { splitRating } from '../../utils/rating-secret-sharing.util';
 
-type CommitmentPayload = bigint[]; // [rating, roundId, targetId, raterId, randomness]
+type CommitmentPayload = bigint[];
 
 interface GenerateProofRequest {
   rating: number;
@@ -93,6 +94,12 @@ export class ProofService {
     const roundId = toFieldDecimal(request.roundId, 'roundId');
     const raterId = toFieldDecimal(request.raterId, 'raterId');
     const targetId = toFieldDecimal(request.targetId, 'targetId');
+    const shares = splitRating(BigInt(rating));
+    const shareRandomness = [
+      generateRandomnessDecimal(),
+      generateRandomnessDecimal(),
+      generateRandomnessDecimal(),
+    ];
     const commitment = await this.commit([
       BigInt(rating),
       BigInt(randomness),
@@ -100,15 +107,23 @@ export class ProofService {
       BigInt(raterId),
       BigInt(targetId),
     ]);
+    const shareCommitments = await Promise.all([
+      this.commit([shares[0], BigInt(shareRandomness[0])]),
+      this.commit([shares[1], BigInt(shareRandomness[1])]),
+      this.commit([shares[2], BigInt(shareRandomness[2])]),
+    ]);
 
     const circuitInput = {
       rating,
       randomness,
+      shares: [shares[0].toString(), shares[1].toString(), shares[2].toString()],
+      shareRandomness,
       roundId,
       raterId,
       targetId,
       commitment,
-    } as const;
+      shareCommitments,
+    };
 
     const { proof, publicSignals } = await groth16.fullProve(
       circuitInput,
@@ -116,6 +131,6 @@ export class ProofService {
       `${ProofService.ARTIFACTS_BASE_PATH}/rating_final.zkey`,
     );
 
-    return { proof, publicSignals, commitment };
+    return { proof, publicSignals, commitment, shares };
   }
 }

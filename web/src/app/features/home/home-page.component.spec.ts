@@ -68,8 +68,9 @@ describe('HomePageComponent', () => {
         protocol: 'groth16',
         curve: 'bn128',
       },
-      publicSignals: ['6', '5', '2', '9'],
+      publicSignals: ['6', '5', '2', '9', '10', '11', '12'],
       commitment: 'a'.repeat(64),
+      shares: [1n, 1n, 3n],
     });
     authServiceStub.refreshSession.and.returnValue(of('token'));
     authServiceStub.getUsers.and.returnValue(
@@ -314,6 +315,7 @@ describe('HomePageComponent', () => {
       jasmine.objectContaining({ ratingId: 42, targetId: 2, roundId: 6 }),
       jasmine.objectContaining({ ratingId: 42, targetId: 2, roundId: 6 }),
     ]);
+    expect(sharePayloads.map(({ share }) => share)).toEqual(['1', '1', '3']);
     expect(
       reconstructRating([
         BigInt(sharePayloads[0].share),

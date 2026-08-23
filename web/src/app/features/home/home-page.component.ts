@@ -32,7 +32,7 @@ import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models
 import { RoundsService } from '../../core/rounds/rounds.service';
 import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
 import { ProofService } from '../../core/ratings/proof.service';
-import { splitRating } from '../../utils/rating-secret-sharing.util';
+import type { RatingShares } from '../../utils/rating-secret-sharing.util';
 import { RatingDialogComponent, RatingDialogData } from './rating-dialog.component';
 import {
   RatingResultsDialogComponent,
@@ -143,7 +143,7 @@ interface RatingSubmission {
   request: SubmitRatingRequest;
   roundId: number;
   targetId: number;
-  value: number;
+  shares: RatingShares;
 }
 
 @Component({
@@ -622,7 +622,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
         targetId: normalizedTargetId,
       }),
     ).pipe(
-      map(({ proof, publicSignals, commitment }) => {
+      map(({ proof, publicSignals, commitment, shares }) => {
         const request: SubmitRatingRequest = {
           commitment,
           proof,
@@ -650,7 +650,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
           request,
           roundId: normalizedRoundId,
           targetId: normalizedTargetId,
-          value: normalizedValue,
+          shares,
         };
       }),
     );
@@ -665,7 +665,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
       throw new Error('Rating submission response must include a positive integer id.');
     }
 
-    const shares = splitRating(submission.value);
     const buildPayload = (share: bigint): RatingSharePayload => ({
       ratingId,
       share: share.toString(),
@@ -673,7 +672,11 @@ export class HomePageComponent implements OnInit, OnDestroy {
       roundId: submission.roundId,
     });
 
-    return [buildPayload(shares[0]), buildPayload(shares[1]), buildPayload(shares[2])];
+    return [
+      buildPayload(submission.shares[0]),
+      buildPayload(submission.shares[1]),
+      buildPayload(submission.shares[2]),
+    ];
   }
 
   private setClosePending(roundId: number, pending: boolean): void {
