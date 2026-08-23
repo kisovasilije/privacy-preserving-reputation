@@ -30,3 +30,8 @@ export type RatingSharePayloads = readonly [
 export interface RatingShareResponse extends RatingSharePayload {
   id: number;
 }
+
+export interface RatingSummary {
+  average: number | null;
+  count: number;
+}

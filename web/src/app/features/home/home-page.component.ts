@@ -34,6 +34,10 @@ import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
 import { ProofService } from '../../core/ratings/proof.service';
 import { splitRating } from '../../utils/rating-secret-sharing.util';
 import { RatingDialogComponent, RatingDialogData } from './rating-dialog.component';
+import {
+  RatingResultsDialogComponent,
+  RatingResultsDialogData,
+} from './rating-results-dialog.component';
 
 function trimmedTextValidator(config: {
   min?: number;
@@ -376,6 +380,28 @@ export class HomePageComponent implements OnInit, OnDestroy {
         this.submitRating();
       }
     });
+  }
+
+  protected openRatingResultsDialog(round: OpenedRound): void {
+    const targetId = toInteger(this.authStore.userId());
+    if (targetId == null) {
+      this.statusTone.set('error');
+      this.statusMessage.set('We could not identify which results to load.');
+      return;
+    }
+
+    this.dialog.open<RatingResultsDialogComponent, RatingResultsDialogData>(
+      RatingResultsDialogComponent,
+      {
+        data: {
+          roundId: round.id,
+          roundTitle: round.title,
+          targetId,
+        },
+        maxWidth: 'calc(100vw - 2rem)',
+        width: '420px',
+      },
+    );
   }
 
   protected submitRating(): void {

@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>Results</h2>
+
+<mat-dialog-content class="results-dialog">
+  <p class="results-dialog__round">{{ data.roundTitle }}</p>
+
+  @if (loading()) {
+    <div class="results-dialog__state">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Loading your summary...</span>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="results-dialog__state results-dialog__state--error">{{ errorMessage() }}</div>
+  } @else if (summary()) {
+    @if (summary()!.count === 0) {
+      <div class="results-dialog__state">No ratings are available for you in this round yet.</div>
+    } @else {
+      <div class="results-summary">
+        <div class="results-summary__item">
+          <span>Average</span>
+          <strong>{{ summary()!.average | number: '1.0-2' }}</strong>
+        </div>
+        <div class="results-summary__item">
+          <span>Ratings</span>
+          <strong>{{ summary()!.count }}</strong>
+        </div>
+      </div>
+    }
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-flat-button type="button" mat-dialog-close>Close</button>
+</mat-dialog-actions>

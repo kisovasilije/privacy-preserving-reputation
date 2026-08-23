@@ -50,4 +50,47 @@ describe('TrustedAuthoritiesService', () => {
     requests[2].flush({ id: 3, ...payloads[2] });
     expect(responseCount).toBe(3);
   });
+
+  it('reconstructs ratings by ratingId and returns their average and count', () => {
+    let summary: { average: number | null; count: number } | undefined;
+    service.getRatingSummary(6, 5).subscribe((value) => {
+      summary = value;
+    });
+
+    const requests = TRUSTED_AUTHORITY_BASE_URLS.map((baseUrl) =>
+      httpMock.expectOne(`${baseUrl}/shares?roundId=6&targetId=5`),
+    );
+
+    requests.forEach((request) => expect(request.request.method).toBe('GET'));
+
+    requests[0].flush([
+      { id: 1, ratingId: 101, share: '1', targetId: 5, roundId: 6 },
+      { id: 2, ratingId: 102, share: '2', targetId: 5, roundId: 6 },
+    ]);
+    requests[1].flush([
+      { id: 8, ratingId: 102, share: '2', targetId: 5, roundId: 6 },
+      { id: 7, ratingId: 101, share: '1', targetId: 5, roundId: 6 },
+    ]);
+    expect(summary).toBeUndefined();
+
+    requests[2].flush([
+      { id: 20, ratingId: 101, share: '3', targetId: 5, roundId: 6 },
+      { id: 21, ratingId: 102, share: '0', targetId: 5, roundId: 6 },
+    ]);
+
+    expect(summary).toEqual({ average: 4.5, count: 2 });
+  });
+
+  it('returns an empty summary when the user has no ratings in the round', () => {
+    let summary: { average: number | null; count: number } | undefined;
+    service.getRatingSummary(6, 5).subscribe((value) => {
+      summary = value;
+    });
+
+    TRUSTED_AUTHORITY_BASE_URLS.map((baseUrl) =>
+      httpMock.expectOne(`${baseUrl}/shares?roundId=6&targetId=5`),
+    ).forEach((request) => request.flush([]));
+
+    expect(summary).toEqual({ average: null, count: 0 });
+  });
 });

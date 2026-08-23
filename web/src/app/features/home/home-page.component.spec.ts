@@ -47,7 +47,7 @@ describe('HomePageComponent', () => {
     roundsService = jasmine.createSpyObj<RoundsService>('RoundsService', ['getOpenedRounds', 'createRound', 'closeRound']);
     trustedAuthoritiesService = jasmine.createSpyObj<TrustedAuthoritiesService>(
       'TrustedAuthoritiesService',
-      ['submitRatingShares'],
+      ['submitRatingShares', 'getRatingSummary'],
     );
     proofService.generateProof.and.resolveTo({
       proof: {
@@ -71,6 +71,9 @@ describe('HomePageComponent', () => {
     ]));
     ratingsService.submitRating.and.returnValue(of({ id: 42 }));
     trustedAuthoritiesService.submitRatingShares.and.returnValue(of([]));
+    trustedAuthoritiesService.getRatingSummary.and.returnValue(
+      of({ average: 4.5, count: 2 }),
+    );
     roundsService.getOpenedRounds.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -104,6 +107,21 @@ describe('HomePageComponent', () => {
 
     const closeButtons = getButtonsByText(fixture, 'Close early');
     expect(closeButtons.length).toBe(1);
+  });
+
+  it('opens results for the selected round and authenticated user', async () => {
+    roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
+
+    fixture.detectChanges();
+
+    getButtonsByText(fixture, 'Results')[0].click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(trustedAuthoritiesService.getRatingSummary).toHaveBeenCalledOnceWith(6, 5);
+    expect(document.body.textContent).toContain('Q2 Review');
+    expect(document.body.textContent).toContain('4.5');
+    expect(document.body.textContent).toContain('2');
   });
 
   it('disables only the clicked close button while closing is pending', () => {

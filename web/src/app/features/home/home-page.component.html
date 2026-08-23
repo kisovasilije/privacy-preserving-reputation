@@ -215,6 +215,14 @@
                 Rate
               </button>
 
+              <button
+                mat-button
+                type="button"
+                (click)="$event.stopPropagation(); openRatingResultsDialog(round)"
+              >
+                Results
+              </button>
+
               @if (isOwner(round)) {
                 <button mat-button type="button" (click)="$event.stopPropagation(); closeRound(round.id)" [disabled]="isClosePending(round.id)">
                   {{ isClosePending(round.id) ? 'Closing...' : 'Close early' }}
