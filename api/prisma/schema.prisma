@@ -26,7 +26,6 @@ model User {
   rounds          Round[]
   ratingsRated    Rating[]    @relation("RatingsRated")
   ratingsReceived Rating[]    @relation("RatingsReceived")
-  aggregates      Aggregate[]
 
   @@map("users")
 }
@@ -41,10 +40,9 @@ model Round {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  author     User        @relation(fields: [authorId], references: [id])
-  authorId   Int
-  aggregates Aggregate[]
-  ratings    Rating[]
+  author   User     @relation(fields: [authorId], references: [id])
+  authorId Int
+  ratings  Rating[]
 
   @@map("rounds")
 }
@@ -66,19 +64,4 @@ model Rating {
 
   @@unique([roundId, raterId, targetId])
   @@map("ratings")
-}
-
-model Aggregate {
-  id      Int   @id @default(autoincrement())
-  count   Int   @default(0)
-  sum     Int   @default(0)
-  average Float @default(0)
-
-  round    Round @relation(fields: [roundId], references: [id])
-  roundId  Int
-  target   User  @relation(fields: [targetId], references: [id])
-  targetId Int
-
-  @@unique([roundId, targetId])
-  @@map("aggregates")
 }

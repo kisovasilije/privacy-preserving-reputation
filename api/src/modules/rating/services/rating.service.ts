@@ -3,14 +3,10 @@ import { authService } from '../../auth/auth.service';
 import { RatingCreation } from '../models/rating/rating-creating.model';
 import { Rating } from '../models/rating/rating.model';
 import { RatingRepository } from '../repositories/rating.repository';
-import { AggregatesService } from './aggregates.service';
 import { roundsService } from './rounds.service';
 
 export class RatingService {
-  constructor(
-    private readonly ratingRepository: RatingRepository,
-    private readonly aggregatesService: AggregatesService,
-  ) {}
+  constructor(private readonly ratingRepository: RatingRepository) {}
 
   public create = async (ratingCreation: RatingCreation): Promise<Result<Rating>> => {
     const round = await roundsService.getOpenedById(ratingCreation.roundId);
@@ -36,9 +32,7 @@ export class RatingService {
       });
     }
 
-    const rating = await this.ratingRepository.create(ratingCreation, (tx, rating) =>
-      this.aggregatesService.upsertAggregate(tx, rating),
-    );
+    const rating = await this.ratingRepository.create(ratingCreation);
     return result.success({ ...rating, comment: rating.comment ?? undefined });
   };
 }
