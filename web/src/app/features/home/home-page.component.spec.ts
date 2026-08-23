@@ -5,15 +5,21 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { of, Subject, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
+import { ProofService } from '../../core/ratings/proof.service';
+import { RatingShareResponse } from '../../core/ratings/ratings.models';
 import { RatingsService } from '../../core/ratings/ratings.service';
+import { TrustedAuthoritiesService } from '../../core/ratings/trusted-authorities.service';
 import { OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
+import { reconstructRating } from '../../utils/rating-secret-sharing.util';
 import { HomePageComponent } from './home-page.component';
 
 describe('HomePageComponent', () => {
   let fixture: ComponentFixture<HomePageComponent>;
+  let proofService: jasmine.SpyObj<ProofService>;
   let ratingsService: jasmine.SpyObj<RatingsService>;
   let roundsService: jasmine.SpyObj<RoundsService>;
+  let trustedAuthoritiesService: jasmine.SpyObj<TrustedAuthoritiesService>;
 
   const authStoreStub = {
     username: signal('alice'),
@@ -36,14 +42,35 @@ describe('HomePageComponent', () => {
 
   beforeEach(async () => {
     authStoreStub.userId.set(5);
+    proofService = jasmine.createSpyObj<ProofService>('ProofService', ['generateProof']);
     ratingsService = jasmine.createSpyObj<RatingsService>('RatingsService', ['submitRating']);
     roundsService = jasmine.createSpyObj<RoundsService>('RoundsService', ['getOpenedRounds', 'createRound', 'closeRound']);
+    trustedAuthoritiesService = jasmine.createSpyObj<TrustedAuthoritiesService>(
+      'TrustedAuthoritiesService',
+      ['submitRatingShares'],
+    );
+    proofService.generateProof.and.resolveTo({
+      proof: {
+        pi_a: ['1', '2', '1'],
+        pi_b: [
+          ['3', '4'],
+          ['5', '6'],
+          ['1', '0'],
+        ],
+        pi_c: ['7', '8', '1'],
+        protocol: 'groth16',
+        curve: 'bn128',
+      },
+      publicSignals: ['5', '6', '2', '9'],
+      commitment: 'a'.repeat(64),
+    });
     authServiceStub.refreshSession.and.returnValue(of('token'));
     authServiceStub.getUsers.and.returnValue(of([
       { id: 2, username: 'bob', email: 'bob@example.com' },
       { id: 5, username: 'alice', email: 'alice@example.com' },
     ]));
-    ratingsService.submitRating.and.returnValue(of(void 0));
+    ratingsService.submitRating.and.returnValue(of({ id: 42 }));
+    trustedAuthoritiesService.submitRatingShares.and.returnValue(of([]));
     roundsService.getOpenedRounds.and.returnValue(of([]));
 
     await TestBed.configureTestingModule({
@@ -51,7 +78,9 @@ describe('HomePageComponent', () => {
       providers: [
         { provide: AuthStore, useValue: authStoreStub },
         { provide: AuthService, useValue: authServiceStub },
+        { provide: ProofService, useValue: proofService },
         { provide: RatingsService, useValue: ratingsService },
+        { provide: TrustedAuthoritiesService, useValue: trustedAuthoritiesService },
         { provide: RoundsService, useValue: roundsService },
       ],
     }).compileComponents();
@@ -127,9 +156,9 @@ describe('HomePageComponent', () => {
     component.createRoundForm.setValue({
       title: 'Peer Review',
       description: '',
-      opensAtDate: new Date('2026-04-12T00:00:00'),
+      opensAtDate: new Date('2027-04-12T00:00:00'),
       opensAtTime: '12:00',
-      closesAtDate: new Date('2026-04-12T00:00:00'),
+      closesAtDate: new Date('2027-04-12T00:00:00'),
       closesAtTime: '11:00',
     });
 
@@ -152,7 +181,7 @@ describe('HomePageComponent', () => {
       description: 'Invite private feedback',
       opensAtDate: null,
       opensAtTime: '',
-      closesAtDate: new Date('2026-04-12T00:00:00'),
+      closesAtDate: new Date('2027-04-12T00:00:00'),
       closesAtTime: '15:00',
     });
 
@@ -195,12 +224,13 @@ describe('HomePageComponent', () => {
     ]);
   });
 
-  it('does not submit the rating form when it is invalid', () => {
+  it('does not submit the rating form when it is invalid', async () => {
     roundsService.getOpenedRounds.and.returnValue(of([buildRound(6, 9, 'Q2 Review')]));
 
     fixture.detectChanges();
 
     getButtonsByText(fixture, 'Rate')[0].click();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     getDocumentButtonsByText('Submit rating')[0].click();
@@ -236,12 +266,89 @@ describe('HomePageComponent', () => {
       targetId: 2,
     }));
     expect(request.commitment).toMatch(/^[a-f0-9]{64}$/);
+    const sharePayloads = trustedAuthoritiesService.submitRatingShares.calls.mostRecent().args[0];
+    expect(sharePayloads).toEqual([
+      jasmine.objectContaining({ ratingId: 42, targetId: 2, roundId: 6 }),
+      jasmine.objectContaining({ ratingId: 42, targetId: 2, roundId: 6 }),
+      jasmine.objectContaining({ ratingId: 42, targetId: 2, roundId: 6 }),
+    ]);
+    expect(
+      reconstructRating([
+        BigInt(sharePayloads[0].share),
+        BigInt(sharePayloads[1].share),
+        BigInt(sharePayloads[2].share),
+      ]),
+    ).toBe(5n);
     expect(component.ratingForm.getRawValue()).toEqual({
       roundId: 6,
       value: null,
       targetId: null,
       comment: '',
     });
+    expect(fixture.nativeElement.textContent).toContain('Rating submitted.');
+  });
+
+  it('does not complete submission when the API omits the mandatory rating id', async () => {
+    ratingsService.submitRating.and.returnValue(of({ id: undefined as unknown as number }));
+
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as any;
+    component.ratingForm.setValue({
+      roundId: 6,
+      value: 5,
+      targetId: 2,
+      comment: '',
+    });
+
+    component.submitRating();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(trustedAuthoritiesService.submitRatingShares).not.toHaveBeenCalled();
+    expect(component.ratingForm.getRawValue()).toEqual({
+      roundId: 6,
+      value: 5,
+      targetId: 2,
+      comment: '',
+    });
+    expect(fixture.nativeElement.textContent).toContain('We could not submit the rating.');
+  });
+
+  it('keeps rating submission pending until the main API and trusted authorities succeed', async () => {
+    const ratingResponse = new Subject<{ id: number }>();
+    const authorityResponses = new Subject<RatingShareResponse[]>();
+    ratingsService.submitRating.and.returnValue(ratingResponse);
+    trustedAuthoritiesService.submitRatingShares.and.returnValue(authorityResponses);
+
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as any;
+    component.ratingForm.setValue({
+      roundId: 6,
+      value: 5,
+      targetId: 2,
+      comment: '',
+    });
+
+    component.submitRating();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.ratingPending()).toBeTrue();
+    expect(trustedAuthoritiesService.submitRatingShares).not.toHaveBeenCalled();
+
+    ratingResponse.next({ id: 42 });
+    fixture.detectChanges();
+
+    expect(trustedAuthoritiesService.submitRatingShares).toHaveBeenCalled();
+    expect(component.ratingPending()).toBeTrue();
+    expect(fixture.nativeElement.textContent).not.toContain('Rating submitted.');
+
+    authorityResponses.next([]);
+    fixture.detectChanges();
+
+    expect(component.ratingPending()).toBeFalse();
     expect(fixture.nativeElement.textContent).toContain('Rating submitted.');
   });
 
@@ -258,7 +365,7 @@ describe('HomePageComponent', () => {
       description: '',
       opensAtDate: null,
       opensAtTime: '',
-      closesAtDate: new Date('2026-04-12T00:00:00'),
+      closesAtDate: new Date('2027-04-12T00:00:00'),
       closesAtTime: '16:00',
     });
 

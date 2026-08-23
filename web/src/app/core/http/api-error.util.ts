@@ -11,6 +11,10 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed'):
     return body.message;
   }
 
+  if (typeof body?.error?.message === 'string' && body.error.message.trim()) {
+    return body.error.message;
+  }
+
   if (Array.isArray(body?.errors) && typeof body.errors[0]?.message === 'string') {
     return body.errors[0].message;
   }

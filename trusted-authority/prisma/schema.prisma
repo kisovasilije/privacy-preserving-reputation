@@ -1,0 +1,20 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Share {
+  id       Int     @id @default(autoincrement())
+  ratingId Int
+  share    Decimal @db.Decimal(78, 0)
+  targetId Int
+  roundId  Int
+
+  @@index([roundId, targetId], map: "Shares_roundId_targetId_idx")
+  @@map("Shares")
+}

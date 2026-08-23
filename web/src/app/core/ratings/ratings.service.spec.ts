@@ -28,13 +28,29 @@ describe('RatingsService', () => {
       comment: 'Reliable, clear communication, delivered on time.',
       roundId: 6,
       targetId: 2,
+      proof: {
+        pi_a: ['1', '2', '1'],
+        pi_b: [
+          ['3', '4'],
+          ['5', '6'],
+          ['1', '0'],
+        ],
+        pi_c: ['7', '8', '1'],
+        protocol: 'groth16',
+        curve: 'bn128',
+      },
+      publicSignals: ['5', '6', '2', '9'],
     };
 
-    service.submitRating(payload).subscribe();
+    let response: unknown;
+    service.submitRating(payload).subscribe((value) => {
+      response = value;
+    });
 
     const request = httpMock.expectOne(`${API_BASE_URL}/ratings`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
-    request.flush({});
+    request.flush({ id: 42 });
+    expect(response).toEqual({ id: 42 });
   });
 });

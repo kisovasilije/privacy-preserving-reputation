@@ -20,12 +20,19 @@ import { AvailableUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
 import { getApiErrorMessage } from '../../core/http/api-error.util';
-import { SubmitRatingRequest } from '../../core/ratings/ratings.models';
+import {
+  RatingSharePayload,
+  RatingSharePayloads,
+  SubmitRatingRequest,
+  SubmitRatingResponse,
+} from '../../core/ratings/ratings.models';
 import { RatingsService } from '../../core/ratings/ratings.service';
+import { TrustedAuthoritiesService } from '../../core/ratings/trusted-authorities.service';
 import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
 import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
 import { ProofService } from '../../core/ratings/proof.service';
+import { splitRating } from '../../utils/rating-secret-sharing.util';
 import { RatingDialogComponent, RatingDialogData } from './rating-dialog.component';
 
 function trimmedTextValidator(config: {
@@ -151,6 +158,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly ratingsService = inject(RatingsService);
+  private readonly trustedAuthoritiesService = inject(TrustedAuthoritiesService);
   private readonly roundsService = inject(RoundsService);
   private readonly proofService = inject(ProofService);
   private readonly dialog = inject(MatDialog);
@@ -376,7 +384,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    let req: SubmitRatingRequest;
     this.clearStatus();
     this.clearRatingSuccessTimer();
     this.ratingSuccessVisible.set(false);
@@ -391,15 +398,21 @@ export class HomePageComponent implements OnInit, OnDestroy {
             return EMPTY;
           }
 
-          req = request;
-          return this.ratingsService.submitRating(request);
+          return this.ratingsService.submitRating(request).pipe(
+            map((response) => this.buildRatingSharePayloads(request, response)),
+            switchMap((sharePayloads) =>
+              this.trustedAuthoritiesService
+                .submitRatingShares(sharePayloads)
+                .pipe(map(() => request)),
+            ),
+          );
         }),
       )
       .subscribe({
-        next: () => {
+        next: (request) => {
           this.ratingPending.set(false);
           this.ratingForm.reset({
-            roundId: req.roundId,
+            roundId: request.roundId,
             value: null,
             targetId: null,
             comment: '',
@@ -580,6 +593,26 @@ export class HomePageComponent implements OnInit, OnDestroy {
         return request;
       }),
     );
+  }
+
+  private buildRatingSharePayloads(
+    request: SubmitRatingRequest,
+    response: SubmitRatingResponse,
+  ): RatingSharePayloads {
+    const ratingId = response.id;
+    if (!Number.isSafeInteger(ratingId) || ratingId <= 0) {
+      throw new Error('Rating submission response must include a positive integer id.');
+    }
+
+    const shares = splitRating(request.value);
+    const buildPayload = (share: bigint): RatingSharePayload => ({
+      ratingId,
+      share: share.toString(),
+      targetId: request.targetId,
+      roundId: request.roundId,
+    });
+
+    return [buildPayload(shares[0]), buildPayload(shares[1]), buildPayload(shares[2])];
   }
 
   private setClosePending(roundId: number, pending: boolean): void {
