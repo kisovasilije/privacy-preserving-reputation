@@ -1,8 +1,9 @@
 # Trusted Authority API
 
 A TypeScript, Express, PostgreSQL, and Prisma REST API for storing canonical
-BN254 scalar-field shares. The same build is intended to run as three trusted
-authorities. Each process selects its database only through `DATABASE_URL`; no
+BN254 scalar-field shares and returning local aggregates. The same build is
+intended to run as three trusted authorities. Each process selects its database
+only through `DATABASE_URL`; no
 instance-specific database address is present in the application source.
 
 ## Prerequisites
@@ -248,13 +249,11 @@ A successful request returns HTTP 201:
 
 ```json
 {
-  "id": 1,
-  "ratingId": 123,
-  "share": "123456789012345678901234567890",
-  "targetId": 456,
-  "roundId": 1
+  "id": 1
 }
 ```
+
+The response acknowledges storage without echoing the share or rating context.
 
 To populate all three development databases, send a request to each instance.
 The identifiers can describe the same rating, while each authority receives its
@@ -273,14 +272,45 @@ The body must contain exactly those four fields. Identifiers must be positive
 JSON integers within PostgreSQL's signed `INTEGER` range. The share must be a
 base-10 integer string in the BN254 scalar field.
 
-### Find shares
+### Aggregate shares
 
 ```sh
 curl 'http://localhost:3001/shares?roundId=1&targetId=456'
 ```
 
-Both query parameters are required exactly once. Results are ordered by `id`
-ascending and returned as an array. No matches produce `[]` with HTTP 200.
+Both query parameters are required exactly once. Each authority sums only its
+own shares matching both identifiers and counts the same rows in one database
+query. The sum is reduced modulo the BN254 scalar-field modulus `p`. HTTP 200
+returns exactly:
+
+```json
+{
+  "aggregateShare": "123456789012345678901234567890",
+  "count": 17
+}
+```
+
+`aggregateShare` is a base-10 string so it retains full field precision. No
+matches return `{"aggregateShare":"0","count":0}`. Individual shares, rating
+IDs, and per-rating records are never returned. There is no rating-level GET
+endpoint or filter.
+
+The frontend requests this aggregate from all three authorities for the same
+round and target, requires their counts to agree, and reconstructs only:
+
+```text
+totalRatingSum = (aggregateShareTA1 + aggregateShareTA2 + aggregateShareTA3) mod p
+average = totalRatingSum / count
+```
+
+Only `{ average, count }` is exposed to the results UI. An empty dataset produces
+`{ average: null, count: 0 }`. Analytics never joins rating IDs or reconstructs
+individual ratings. The frontend rejects unavailable authorities, inconsistent
+counts, malformed aggregates, and totals outside the 1–5 rating scale.
+
+Correct aggregation assumes all authorities hold shares for the same completed
+set of ratings. Equal counts alone cannot verify that set; submissions and
+retries must keep the three stores in sync.
 
 ### Health check
 
@@ -311,12 +341,14 @@ values at least `p` are rejected. PostgreSQL stores the result in
 Identifiers use PostgreSQL `INTEGER` and are represented as JSON numbers in
 request bodies and responses. GET query parameters are textual because they are
 part of a URL, but the API validates and converts them to integers before
-querying. Only the BN254 `share` uses a base-10 string in JSON, preventing any
-precision loss for the field element.
+querying. The BN254 `share` in POST requests and `aggregateShare` in GET responses
+use base-10 strings in JSON, preventing precision loss for field elements. Sums
+use exact PostgreSQL decimal arithmetic and are reduced with JavaScript `bigint`.
 
 ## npm scripts
 
 - `npm run dev` - run the API in watch mode
+- `npm test` - run HTTP contract and aggregate regression tests with a stub database client
 - `npm run typecheck` - check strict TypeScript without emitting files
 - `npm run build` - generate Prisma Client and compile to `dist`
 - `npm start` - run the compiled server

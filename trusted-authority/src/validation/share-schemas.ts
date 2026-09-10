@@ -62,7 +62,7 @@ export const createShareSchema = z
   })
   .strict("Unexpected fields are not allowed.");
 
-export const findSharesQuerySchema = z
+export const aggregateSharesQuerySchema = z
   .object({
     roundId: positiveIdentifierQuerySchema,
     targetId: positiveIdentifierQuerySchema,
