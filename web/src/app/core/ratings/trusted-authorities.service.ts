@@ -2,8 +2,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { forkJoin, map } from 'rxjs';
 import { TRUSTED_AUTHORITY_BASE_URLS } from '../config/api.config';
-import { reconstructRating } from '../../utils/rating-secret-sharing.util';
+import { CIRCOM_FIELD_SIZE, toCircomField } from '../../utils/circom-field.util';
 import {
+  RatingAggregateResponse,
   RatingSharePayloads,
   RatingShareResponse,
   RatingSummary,
@@ -26,61 +27,47 @@ export class TrustedAuthoritiesService {
 
     return forkJoin(
       TRUSTED_AUTHORITY_BASE_URLS.map((baseUrl) =>
-        this.http.get<RatingShareResponse[]>(`${baseUrl}/shares`, { params }),
+        this.http.get<RatingAggregateResponse>(`${baseUrl}/shares`, { params }),
       ),
-    ).pipe(map((authorityShares) => this.buildSummary(authorityShares, roundId, targetId)));
+    ).pipe(map((aggregates) => this.buildSummary(aggregates)));
   }
 
-  private buildSummary(
-    authorityShares: readonly RatingShareResponse[][],
-    roundId: number,
-    targetId: number,
-  ): RatingSummary {
-    const indexedShares = authorityShares.map((shares) => {
-      const byRatingId = new Map<number, RatingShareResponse>();
-
-      for (const share of shares) {
-        if (share.roundId !== roundId || share.targetId !== targetId) {
-          throw new Error('Trusted authority returned a share for a different summary.');
-        }
-
-        if (byRatingId.has(share.ratingId)) {
-          throw new Error('Trusted authority returned duplicate shares for a rating.');
-        }
-
-        byRatingId.set(share.ratingId, share);
-      }
-
-      return byRatingId;
-    });
-
-    const ratingIds = [...indexedShares[0].keys()];
+  private buildSummary(aggregates: readonly RatingAggregateResponse[]): RatingSummary {
+    const count = aggregates[0]?.count;
     if (
-      indexedShares.some(
-        (shares) =>
-          shares.size !== ratingIds.length || ratingIds.some((ratingId) => !shares.has(ratingId)),
-      )
+      !Number.isSafeInteger(count) ||
+      count < 0 ||
+      aggregates.some((aggregate) => aggregate?.count !== count)
     ) {
-      throw new Error('Trusted authorities returned incomplete rating shares.');
+      throw new Error('Trusted authorities returned inconsistent rating counts.');
     }
 
-    const total = ratingIds.reduce((sum, ratingId) => {
-      const rating = reconstructRating([
-        BigInt(indexedShares[0].get(ratingId)!.share),
-        BigInt(indexedShares[1].get(ratingId)!.share),
-        BigInt(indexedShares[2].get(ratingId)!.share),
-      ]);
+    const totalRatingSum = toCircomField(
+      aggregates.reduce((sum, { aggregateShare }) => {
+        if (typeof aggregateShare !== 'string' || !/^[0-9]+$/.test(aggregateShare)) {
+          throw new Error('Trusted authority returned an invalid aggregate share.');
+        }
 
-      if (rating < 1n || rating > 5n) {
-        throw new Error('Trusted authorities returned an invalid reconstructed rating.');
-      }
+        const share = BigInt(aggregateShare);
+        if (share >= CIRCOM_FIELD_SIZE || (count === 0 && share !== 0n)) {
+          throw new Error('Trusted authority returned an invalid aggregate share.');
+        }
 
-      return sum + rating;
-    }, 0n);
+        return sum + share;
+      }, 0n),
+    );
+
+    const ratingCount = BigInt(count);
+    if (totalRatingSum < ratingCount || totalRatingSum > 5n * ratingCount) {
+      throw new Error('Trusted authorities returned an invalid aggregate rating sum.');
+    }
 
     return {
-      average: ratingIds.length ? Number(total) / ratingIds.length : null,
-      count: ratingIds.length,
+      // Divide before converting to numbers so even large totals retain precision.
+      average: count
+        ? Number(totalRatingSum / ratingCount) + Number(totalRatingSum % ratingCount) / count
+        : null,
+      count,
     };
   }
 }

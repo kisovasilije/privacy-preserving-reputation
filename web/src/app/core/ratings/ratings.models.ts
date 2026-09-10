@@ -27,8 +27,13 @@ export type RatingSharePayloads = readonly [
   RatingSharePayload,
 ];
 
-export interface RatingShareResponse extends RatingSharePayload {
+export interface RatingShareResponse {
   id: number;
+}
+
+export interface RatingAggregateResponse {
+  aggregateShare: string;
+  count: number;
 }
 
 export interface RatingSummary {
