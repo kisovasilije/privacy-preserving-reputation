@@ -6,12 +6,11 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { getApiErrorMessage } from '../../core/http/api-error.util';
 import { RatingSummary } from '../../core/ratings/ratings.models';
-import { TrustedAuthoritiesService } from '../../core/ratings/trusted-authorities.service';
+import { RatingsService } from '../../core/ratings/ratings.service';
 
 export interface RatingResultsDialogData {
   roundId: number;
   roundTitle: string;
-  targetId: number;
 }
 
 @Component({
@@ -22,7 +21,7 @@ export interface RatingResultsDialogData {
 })
 export class RatingResultsDialogComponent implements OnInit {
   protected readonly data = inject<RatingResultsDialogData>(MAT_DIALOG_DATA);
-  private readonly trustedAuthoritiesService = inject(TrustedAuthoritiesService);
+  private readonly ratingsService = inject(RatingsService);
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
@@ -30,8 +29,8 @@ export class RatingResultsDialogComponent implements OnInit {
   protected readonly summary = signal<RatingSummary | null>(null);
 
   ngOnInit(): void {
-    this.trustedAuthoritiesService
-      .getRatingSummary(this.data.roundId, this.data.targetId)
+    this.ratingsService
+      .getRatingSummary(this.data.roundId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (summary) => {

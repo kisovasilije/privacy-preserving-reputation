@@ -1,8 +1,7 @@
 . "$PSScriptRoot/config.ps1"
 
-Write-Host "==> Creating application artifact folders..."
+Write-Host "==> Creating API runtime artifact folder..."
 
-New-Item -ItemType Directory -Force -Path $WebAppArtifactsDir | Out-Null
 New-Item -ItemType Directory -Force -Path $ApiArtifactsDir | Out-Null
 
 if (!(Test-Path $WasmFile)) {
@@ -17,22 +16,16 @@ if (!(Test-Path $VerificationKeyFile)) {
     throw "Missing verification key. Run 02-trusted-setup.ps1 first."
 }
 
-Write-Host "==> Exporting Web App proving artifacts..."
+Write-Host "==> Exporting API runtime artifacts..."
 
-Copy-Item $WasmFile "$WebAppArtifactsDir/$CircuitName.wasm" -Force
-Copy-Item $ZkeyFinal "$WebAppArtifactsDir/${CircuitName}_final.zkey" -Force
-
-Write-Host "==> Exporting API verification artifact..."
-
+Copy-Item $WasmFile "$ApiArtifactsDir/$CircuitName.wasm" -Force
+Copy-Item $ZkeyFinal "$ApiArtifactsDir/${CircuitName}_final.zkey" -Force
 Copy-Item $VerificationKeyFile "$ApiArtifactsDir/verification_key.json" -Force
 
 Write-Host "==> Export complete."
 
 Write-Host ""
-Write-Host "Web App gets:"
-Write-Host "  $WebAppArtifactsDir/$CircuitName.wasm"
-Write-Host "  $WebAppArtifactsDir/${CircuitName}_final.zkey"
-
-Write-Host ""
-Write-Host "API gets:"
+Write-Host "API runtime artifacts:"
+Write-Host "  $ApiArtifactsDir/$CircuitName.wasm"
+Write-Host "  $ApiArtifactsDir/${CircuitName}_final.zkey"
 Write-Host "  $ApiArtifactsDir/verification_key.json"

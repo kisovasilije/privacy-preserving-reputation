@@ -23,23 +23,13 @@ describe('RatingsService', () => {
 
   it('should submit a rating with the provided payload', () => {
     const payload = {
-      commitment: 'abc123',
-      comment: 'Reliable, clear communication, delivered on time.',
+      value: 5,
       roundId: 6,
-      raterId: 5,
       targetId: 2,
-      proof: {
-        pi_a: ['1', '2', '1'],
-        pi_b: [
-          ['3', '4'],
-          ['5', '6'],
-          ['1', '0'],
-        ],
-        pi_c: ['7', '8', '1'],
-        protocol: 'groth16',
-        curve: 'bn128',
-      },
-      publicSignals: ['6', '5', '2', '9'],
+      comment: 'Reliable, clear communication, delivered on time.',
+      keepRaterIdAnonymous: true,
+      keepTargetIdAnonymous: false,
+      keepRoundIdAnonymous: false,
     };
 
     let response: unknown;
@@ -50,8 +40,20 @@ describe('RatingsService', () => {
     const request = httpMock.expectOne(`${API_BASE_URL}/ratings`);
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
-    expect(request.request.body.value).toBeUndefined();
     request.flush({ id: 42 });
     expect(response).toEqual({ id: 42 });
+  });
+
+  it('should load the authenticated user summary for a round', () => {
+    let response: unknown;
+    service.getRatingSummary(6).subscribe((value) => {
+      response = value;
+    });
+
+    const request = httpMock.expectOne(`${API_BASE_URL}/ratings/summary?roundId=6`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.has('targetId')).toBeFalse();
+    request.flush({ average: 4.5, count: 2 });
+    expect(response).toEqual({ average: 4.5, count: 2 });
   });
 });
