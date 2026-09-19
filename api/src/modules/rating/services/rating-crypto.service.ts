@@ -16,7 +16,6 @@ export interface GenerateRatingProofRequest {
 }
 
 export interface GeneratedRatingProof {
-  readonly commitment: string;
   readonly proof: Groth16Proof;
   readonly publicSignals: PublicSignals;
   readonly shares: RatingShares;
@@ -129,7 +128,7 @@ export class RatingCryptoService {
       shareCommitments,
     };
     const { proof, publicSignals } = await groth16.fullProve(circuitInput, this.wasmPath, this.zkeyPath);
-    const expectedPublicSignals = [roundId, raterId, targetId, commitment, ...shareCommitments];
+    const expectedPublicSignals = [commitment, ...shareCommitments];
 
     if (
       publicSignals.length !== expectedPublicSignals.length ||
@@ -144,7 +143,7 @@ export class RatingCryptoService {
       throw new Error('Generated proof failed self-verification');
     }
 
-    return { commitment, proof, publicSignals, shares };
+    return { proof, publicSignals, shares };
   }
 
   private async commit(payload: bigint[]): Promise<string> {

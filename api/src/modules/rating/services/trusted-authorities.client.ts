@@ -31,7 +31,6 @@ export interface RatingSummary {
 }
 
 interface RatingSharePayload {
-  readonly ratingId: number;
   readonly share: string;
   readonly targetId: number;
   readonly roundId: number;
@@ -51,15 +50,14 @@ export class TrustedAuthoritiesClient {
   ) {}
 
   public async submitRatingShares(
-    ratingId: number,
     shares: RatingShares,
     roundId: number,
     targetId: number,
   ): Promise<void> {
     await Promise.all([
-      this.submitShare(0, this.baseUrls[0], { ratingId, share: shares[0].toString(), roundId, targetId }),
-      this.submitShare(1, this.baseUrls[1], { ratingId, share: shares[1].toString(), roundId, targetId }),
-      this.submitShare(2, this.baseUrls[2], { ratingId, share: shares[2].toString(), roundId, targetId }),
+      this.submitShare(0, this.baseUrls[0], { share: shares[0].toString(), roundId, targetId }),
+      this.submitShare(1, this.baseUrls[1], { share: shares[1].toString(), roundId, targetId }),
+      this.submitShare(2, this.baseUrls[2], { share: shares[2].toString(), roundId, targetId }),
     ]);
   }
 

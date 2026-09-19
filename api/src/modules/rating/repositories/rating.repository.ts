@@ -6,7 +6,6 @@ export class RatingRepository {
   public create = async (rating: RatingPersistence): Promise<Rating> => {
     return prisma.rating.create({
       data: {
-        commitment: rating.commitment,
         comment: rating.comment,
         proof: rating.proof as unknown as Prisma.InputJsonValue,
         publicSignals: rating.publicSignals as Prisma.InputJsonValue,

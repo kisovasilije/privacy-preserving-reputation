@@ -105,10 +105,11 @@ DATABASE_URL='postgresql://postgres:kiso@localhost:5432/ta2' npm run migrate:dep
 DATABASE_URL='postgresql://postgres:kiso@localhost:5432/ta3' npm run migrate:deploy
 ```
 
-The initial migration creates one application table, `Shares`, plus Prisma's
-own migration metadata table. It also creates database check constraints for
-positive identifiers and the BN254 range, and an index on
-`("roundId", "targetId")`.
+The migrations create one application table, `Shares`, plus Prisma's own
+migration metadata table. The current schema stores only the share, round, and
+target; it does not store a main-API rating identifier. Database constraints
+enforce positive round and target identifiers and the BN254 range, and an index
+on `("roundId", "targetId")` supports aggregation.
 
 ## Development
 
@@ -221,7 +222,7 @@ All responses are JSON. Validation failures use HTTP 400 and this shape:
     "message": "Request validation failed.",
     "details": [
       {
-        "field": "body.ratingId",
+        "field": "body.targetId",
         "message": "Must be greater than zero."
       }
     ]
@@ -238,7 +239,6 @@ details, credentials, or a connection string.
 curl --request POST 'http://localhost:3001/shares' \
   --header 'Content-Type: application/json' \
   --data '{
-    "ratingId": 123,
     "share": "123456789012345678901234567890",
     "targetId": 456,
     "roundId": 1
@@ -256,19 +256,19 @@ A successful request returns HTTP 201:
 The response acknowledges storage without echoing the share or rating context.
 
 To populate all three development databases, send a request to each instance.
-The identifiers can describe the same rating, while each authority receives its
-own field share:
+The round and target identify the same aggregation bucket, while each authority
+receives its own field share:
 
 ```sh
-curl --request POST 'http://localhost:3001/shares' --header 'Content-Type: application/json' --data '{"ratingId":123,"share":"111","targetId":456,"roundId":1}'
-curl --request POST 'http://localhost:3002/shares' --header 'Content-Type: application/json' --data '{"ratingId":123,"share":"222","targetId":456,"roundId":1}'
-curl --request POST 'http://localhost:3003/shares' --header 'Content-Type: application/json' --data '{"ratingId":123,"share":"333","targetId":456,"roundId":1}'
+curl --request POST 'http://localhost:3001/shares' --header 'Content-Type: application/json' --data '{"share":"111","targetId":456,"roundId":1}'
+curl --request POST 'http://localhost:3002/shares' --header 'Content-Type: application/json' --data '{"share":"222","targetId":456,"roundId":1}'
+curl --request POST 'http://localhost:3003/shares' --header 'Content-Type: application/json' --data '{"share":"333","targetId":456,"roundId":1}'
 ```
 
 Each request is stored only in the database selected by that process's
 `DATABASE_URL`.
 
-The body must contain exactly those four fields. Identifiers must be positive
+The body must contain exactly those three fields. Identifiers must be positive
 JSON integers within PostgreSQL's signed `INTEGER` range. The share must be a
 base-10 integer string in the BN254 scalar field.
 
@@ -291,9 +291,10 @@ returns exactly:
 ```
 
 `aggregateShare` is a base-10 string so it retains full field precision. No
-matches return `{"aggregateShare":"0","count":0}`. Individual shares, rating
-IDs, and per-rating records are never returned. There is no rating-level GET
-endpoint or filter.
+matches return `{"aggregateShare":"0","count":0}`. Individual shares and
+per-submission records are never returned. The authority neither receives nor
+stores a main-API rating ID, and there is no rating-level GET endpoint or
+filter.
 
 The frontend requests this aggregate from all three authorities for the same
 round and target, requires their counts to agree, and reconstructs only:
@@ -304,9 +305,9 @@ average = totalRatingSum / count
 ```
 
 Only `{ average, count }` is exposed to the results UI. An empty dataset produces
-`{ average: null, count: 0 }`. Analytics never joins rating IDs or reconstructs
-individual ratings. The frontend rejects unavailable authorities, inconsistent
-counts, malformed aggregates, and totals outside the 1–5 rating scale.
+`{ average: null, count: 0 }`. Analytics never reconstructs individual ratings.
+The frontend rejects unavailable authorities, inconsistent counts, malformed
+aggregates, and totals outside the 1–5 rating scale.
 
 Correct aggregation assumes all authorities hold shares for the same completed
 set of ratings. Equal counts alone cannot verify that set; submissions and

@@ -45,7 +45,6 @@ export class RatingService {
       targetId: request.targetId,
     });
     const rating = await this.ratingRepository.create({
-      commitment: generated.commitment,
       comment: request.comment?.trim() || undefined,
       proof: generated.proof,
       publicSignals: generated.publicSignals,
@@ -55,7 +54,6 @@ export class RatingService {
     });
 
     await this.trustedAuthoritiesClient.submitRatingShares(
-      rating.id,
       generated.shares,
       request.roundId,
       request.targetId,
