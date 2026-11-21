@@ -15,9 +15,6 @@
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "moduleResolution": "bundler",
-    "paths": {
-      "@rating-crypto/poseidon": ["./node_modules/circomlibjs/src/poseidon_wasm.js"]
-    },
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022"

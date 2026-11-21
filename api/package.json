@@ -2,6 +2,9 @@
   "name": "api",
   "version": "1.0.0",
   "description": "",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "main": "index.js",
   "scripts": {
     "format": "prettier --write .",
@@ -15,12 +18,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/circomlibjs": "^0.1.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.5.0",
     "@types/snarkjs": "^0.7.9",
-    "dotenv": "^17.3.1",
     "prettier": "^3.8.1",
     "prisma": "^7.8.0",
     "typescript": "^6.0.2"
@@ -29,7 +32,9 @@
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.8.0",
     "bcryptjs": "^3.0.3",
+    "circomlibjs": "^0.1.7",
     "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",

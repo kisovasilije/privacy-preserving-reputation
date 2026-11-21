@@ -9,12 +9,12 @@ $ErrorActionPreference = "Stop"
 
 $CircuitName = "rating"
 $CircuitFile = "circuits/$CircuitName.circom"
+$CircuitVersion = "v1"
 
 $PotPower = 14
 
 $BuildDir = "build"
-$WebAppArtifactsDir = "../web/public/assets/zk"
-$ApiArtifactsDir = "../api/zk-artifacts"
+$ApiArtifactsDir = "../api/zk-artifacts/$CircuitName/$CircuitVersion"
 
 $R1csFile = "$BuildDir/$CircuitName.r1cs"
 $SymFile = "$BuildDir/$CircuitName.sym"

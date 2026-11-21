@@ -1,29 +1,29 @@
 import z from 'zod';
 
-const decimalStringSchema = z.string().regex(/^(0|[1-9]\d*)$/, 'Must be an unsigned decimal string');
-
-const groth16ProofSchema = z.object({
-  pi_a: z.tuple([decimalStringSchema, decimalStringSchema, decimalStringSchema]),
-  pi_b: z.tuple([
-    z.tuple([decimalStringSchema, decimalStringSchema]),
-    z.tuple([decimalStringSchema, decimalStringSchema]),
-    z.tuple([decimalStringSchema, decimalStringSchema]),
-  ]),
-  pi_c: z.tuple([decimalStringSchema, decimalStringSchema, decimalStringSchema]),
-  protocol: z.literal('groth16'),
-  curve: z.literal('bn128'),
-});
-
-const publicSignalsSchema = z.array(decimalStringSchema).length(7);
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
+const positiveIdentifierSchema = z.number().int().positive().max(POSTGRES_INTEGER_MAX);
 
 export const createRatingSchema = z
   .object({
-    commitment: z.string(),
+    value: z.number().int().min(1).max(5),
+    roundId: positiveIdentifierSchema,
+    targetId: positiveIdentifierSchema,
     comment: z.string().trim().max(1024).optional(),
-    roundId: z.number().int().positive().optional(),
-    raterId: z.number().int().positive().optional(),
-    targetId: z.number().int().positive().optional(),
-    proof: groth16ProofSchema,
-    publicSignals: publicSignalsSchema,
+    keepRaterIdAnonymous: z.boolean(),
+    keepTargetIdAnonymous: z.boolean(),
+    keepRoundIdAnonymous: z.boolean(),
   })
   .strict();
+
+export type CreateRatingRequest = z.infer<typeof createRatingSchema>;
+
+export const ratingSummaryQuerySchema = z
+  .object({
+    roundId: z
+      .string()
+      .regex(/^[1-9]\d*$/, 'Must be a positive base-10 integer')
+      .refine(value => Number(value) <= POSTGRES_INTEGER_MAX, 'Must fit in a PostgreSQL integer'),
+  })
+  .strict();
+
+export type RatingSummaryQuery = z.infer<typeof ratingSummaryQuerySchema>;

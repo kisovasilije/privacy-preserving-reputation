@@ -16,7 +16,6 @@ export function createSharesRouter(prisma: PrismaClient): Router {
 
     const createdShare = await prisma.share.create({
       data: {
-        ratingId: input.ratingId,
         share: input.share.toString(),
         targetId: input.targetId,
         roundId: input.roundId,

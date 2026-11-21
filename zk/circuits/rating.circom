@@ -7,25 +7,25 @@ template Rating() {
     Private inputs:
       - rating: 1, 2, 3, 4, or 5
       - randomness: a random value to prevent preimage attacks
+      - roundId: the ID of the rating round
+      - raterId: the ID of the user providing the rating
+      - targetId: the ID of the user being rated
       - shares: three additive shares of the rating
       - shareRandomness: independent randomness for each share commitment
   */
   signal input rating;
   signal input randomness;
+  signal input roundId;
+  signal input raterId;
+  signal input targetId;
   signal input shares[3];
   signal input shareRandomness[3];
 
   /*
     Public inputs:
-      - roundId: the ID of the rating round
-      - raterId: the ID of the user providing the rating
-      - targetId: the ID of the user being rated
       - commitment: a Poseidon hash of the above values, used as a commitment to the rating
       - shareCommitments: Poseidon commitments to the three additive shares
   */
-  signal input roundId;
-  signal input raterId;
-  signal input targetId;
   signal input commitment;
   signal input shareCommitments[3];
 
@@ -65,4 +65,4 @@ template Rating() {
   }
 }
 
-component main{ public [roundId, raterId, targetId, commitment, shareCommitments] } = Rating();
+component main{ public [commitment, shareCommitments] } = Rating();

@@ -10,7 +10,6 @@ datasource db {
 
 model Share {
   id       Int     @id @default(autoincrement())
-  ratingId Int
   share    Decimal @db.Decimal(78, 0)
   targetId Int
   roundId  Int

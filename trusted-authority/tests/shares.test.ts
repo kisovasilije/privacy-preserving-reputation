@@ -93,7 +93,7 @@ test("GET requires one round and target and rejects rating-level filters", async
 
 test("POST acknowledges storage without returning an individual share or rating data", async (context) => {
   const { url, create } = await createFixture(context);
-  const payload = { ratingId: 101, share: "123", targetId: 5, roundId: 6 };
+  const payload = { share: "123", targetId: 5, roundId: 6 };
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -106,4 +106,23 @@ test("POST acknowledges storage without returning an individual share or rating 
     data: payload,
     select: { id: true },
   });
+});
+
+test("POST rejects the removed rating identifier", async (context) => {
+  const { url, create } = await createFixture(context);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ratingId: 101,
+      share: "123",
+      targetId: 5,
+      roundId: 6,
+    }),
+  });
+
+  assert.equal(response.status, 400);
+  const body = await response.json();
+  assert.equal(body.error.code, "VALIDATION_ERROR");
+  assert.equal(create.mock.callCount(), 0);
 });

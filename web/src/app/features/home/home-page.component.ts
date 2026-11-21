@@ -20,19 +20,10 @@ import { AvailableUser } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
 import { AuthStore } from '../../core/auth/auth.store';
 import { getApiErrorMessage } from '../../core/http/api-error.util';
-import {
-  RatingSharePayload,
-  RatingSharePayloads,
-  SubmitRatingRequest,
-  SubmitRatingResponse,
-} from '../../core/ratings/ratings.models';
+import { SubmitRatingRequest } from '../../core/ratings/ratings.models';
 import { RatingsService } from '../../core/ratings/ratings.service';
-import { TrustedAuthoritiesService } from '../../core/ratings/trusted-authorities.service';
 import { CreateRoundRequest, OpenedRound } from '../../core/rounds/rounds.models';
 import { RoundsService } from '../../core/rounds/rounds.service';
-import { EMPTY, from, map, Observable, of, switchMap } from 'rxjs';
-import { ProofService } from '../../core/ratings/proof.service';
-import type { RatingShares } from '../../utils/rating-secret-sharing.util';
 import { RatingDialogComponent, RatingDialogData } from './rating-dialog.component';
 import {
   RatingResultsDialogComponent,
@@ -142,8 +133,6 @@ const roundScheduleValidator: ValidatorFn = (control: AbstractControl): Validati
 interface RatingSubmission {
   request: SubmitRatingRequest;
   roundId: number;
-  targetId: number;
-  shares: RatingShares;
 }
 
 @Component({
@@ -169,9 +158,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
   private readonly ratingsService = inject(RatingsService);
-  private readonly trustedAuthoritiesService = inject(TrustedAuthoritiesService);
   private readonly roundsService = inject(RoundsService);
-  private readonly proofService = inject(ProofService);
   private readonly dialog = inject(MatDialog);
   private readonly dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
@@ -393,20 +380,12 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   protected openRatingResultsDialog(round: OpenedRound): void {
-    const targetId = toInteger(this.authStore.userId());
-    if (targetId == null) {
-      this.statusTone.set('error');
-      this.statusMessage.set('We could not identify which results to load.');
-      return;
-    }
-
     this.dialog.open<RatingResultsDialogComponent, RatingResultsDialogData>(
       RatingResultsDialogComponent,
       {
         data: {
           roundId: round.id,
           roundTitle: round.title,
-          targetId,
         },
         maxWidth: 'calc(100vw - 2rem)',
         width: '420px',
@@ -425,48 +404,36 @@ export class HomePageComponent implements OnInit, OnDestroy {
     this.ratingSuccessVisible.set(false);
     this.ratingPending.set(true);
 
-    this.buildSubmitRatingRequest()
-      .pipe(
-        switchMap((submission) => {
-          if (!submission) {
-            this.ratingForm.markAllAsTouched();
-            this.ratingPending.set(false);
-            return EMPTY;
-          }
+    const submission = this.buildSubmitRatingRequest();
+    if (!submission) {
+      this.ratingForm.markAllAsTouched();
+      this.ratingPending.set(false);
+      return;
+    }
 
-          return this.ratingsService.submitRating(submission.request).pipe(
-            map((response) => this.buildRatingSharePayloads(submission, response)),
-            switchMap((sharePayloads) =>
-              this.trustedAuthoritiesService
-                .submitRatingShares(sharePayloads)
-                .pipe(map(() => submission)),
-            ),
-          );
-        }),
-      )
-      .subscribe({
-        next: (submission) => {
-          this.ratingPending.set(false);
-          this.ratingForm.reset({
-            roundId: submission.roundId,
-            value: null,
-            targetId: null,
-            comment: '',
-            keepRaterIdAnonymous: true,
-            keepTargetIdAnonymous: false,
-            keepRoundIdAnonymous: false,
-          });
-          this.statusTone.set('success');
-          this.statusMessage.set('Rating submitted.');
-          this.showRatingSuccessFeedback();
-        },
-        error: (error: unknown) => {
-          this.ratingPending.set(false);
-          this.ratingSuccessVisible.set(false);
-          this.statusTone.set('error');
-          this.statusMessage.set(getApiErrorMessage(error, 'We could not submit the rating.'));
-        },
-      });
+    this.ratingsService.submitRating(submission.request).subscribe({
+      next: () => {
+        this.ratingPending.set(false);
+        this.ratingForm.reset({
+          roundId: submission.roundId,
+          value: null,
+          targetId: null,
+          comment: '',
+          keepRaterIdAnonymous: true,
+          keepTargetIdAnonymous: false,
+          keepRoundIdAnonymous: false,
+        });
+        this.statusTone.set('success');
+        this.statusMessage.set('Rating submitted.');
+        this.showRatingSuccessFeedback();
+      },
+      error: (error: unknown) => {
+        this.ratingPending.set(false);
+        this.ratingSuccessVisible.set(false);
+        this.statusTone.set('error');
+        this.statusMessage.set(getApiErrorMessage(error, 'We could not submit the rating.'));
+      },
+    });
   }
 
   protected formatDateTime(value: string): string {
@@ -588,7 +555,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     return request.opensAt != null && new Date(request.opensAt) > new Date();
   }
 
-  private buildSubmitRatingRequest(): Observable<RatingSubmission | null> {
+  private buildSubmitRatingRequest(): RatingSubmission | null {
     const {
       roundId,
       value,
@@ -601,82 +568,35 @@ export class HomePageComponent implements OnInit, OnDestroy {
     const normalizedRoundId = toInteger(roundId);
     const normalizedValue = toInteger(value);
     const normalizedTargetId = toInteger(targetId);
-    const normalizedRaterId = toInteger(this.authStore.userId());
 
     if (
       normalizedRoundId == null ||
       normalizedValue == null ||
       normalizedValue < 1 ||
       normalizedValue > 5 ||
-      normalizedTargetId == null ||
-      normalizedRaterId == null
+      normalizedTargetId == null
     ) {
-      return of(null);
+      return null;
     }
 
-    return from(
-      this.proofService.generateProof({
-        rating: normalizedValue,
-        roundId: normalizedRoundId,
-        raterId: normalizedRaterId,
-        targetId: normalizedTargetId,
-      }),
-    ).pipe(
-      map(({ proof, publicSignals, commitment, shares }) => {
-        const request: SubmitRatingRequest = {
-          commitment,
-          proof,
-          publicSignals,
-        };
+    const request: SubmitRatingRequest = {
+      value: normalizedValue,
+      roundId: normalizedRoundId,
+      targetId: normalizedTargetId,
+      keepRaterIdAnonymous,
+      keepTargetIdAnonymous,
+      keepRoundIdAnonymous,
+    };
 
-        if (!keepRoundIdAnonymous) {
-          request.roundId = normalizedRoundId;
-        }
-
-        if (!keepRaterIdAnonymous) {
-          request.raterId = normalizedRaterId;
-        }
-
-        if (!keepTargetIdAnonymous) {
-          request.targetId = normalizedTargetId;
-        }
-
-        const normalizedComment = (comment ?? '').trim();
-        if (normalizedComment) {
-          request.comment = normalizedComment;
-        }
-
-        return {
-          request,
-          roundId: normalizedRoundId,
-          targetId: normalizedTargetId,
-          shares,
-        };
-      }),
-    );
-  }
-
-  private buildRatingSharePayloads(
-    submission: RatingSubmission,
-    response: SubmitRatingResponse,
-  ): RatingSharePayloads {
-    const ratingId = response.id;
-    if (!Number.isSafeInteger(ratingId) || ratingId <= 0) {
-      throw new Error('Rating submission response must include a positive integer id.');
+    const normalizedComment = (comment ?? '').trim();
+    if (normalizedComment) {
+      request.comment = normalizedComment;
     }
 
-    const buildPayload = (share: bigint): RatingSharePayload => ({
-      ratingId,
-      share: share.toString(),
-      targetId: submission.targetId,
-      roundId: submission.roundId,
-    });
-
-    return [
-      buildPayload(submission.shares[0]),
-      buildPayload(submission.shares[1]),
-      buildPayload(submission.shares[2]),
-    ];
+    return {
+      request,
+      roundId: normalizedRoundId,
+    };
   }
 
   private setClosePending(roundId: number, pending: boolean): void {

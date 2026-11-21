@@ -1,7 +1,7 @@
 import { HttpRequest, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { API_BASE_URL, TRUSTED_AUTHORITY_BASE_URLS } from '../config/api.config';
+import { API_BASE_URL } from '../config/api.config';
 import { authInterceptor } from './auth.interceptor';
 import { AuthStore } from './auth.store';
 
@@ -30,8 +30,8 @@ describe('authInterceptor', () => {
     );
   });
 
-  it('does not disclose the access token to trusted authorities', () => {
-    const request = new HttpRequest('POST', `${TRUSTED_AUTHORITY_BASE_URLS[0]}/shares`, {});
+  it('does not disclose the access token to unrelated origins', () => {
+    const request = new HttpRequest('POST', 'https://example.test/resource', {});
 
     TestBed.runInInjectionContext(() => authInterceptor(request, next)).subscribe();
 

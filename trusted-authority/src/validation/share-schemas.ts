@@ -55,7 +55,6 @@ const fieldElementSchema = z
 
 export const createShareSchema = z
   .object({
-    ratingId: positiveIdentifierSchema,
     share: fieldElementSchema,
     targetId: positiveIdentifierSchema,
     roundId: positiveIdentifierSchema,
